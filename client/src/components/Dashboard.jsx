@@ -83,8 +83,16 @@ const Dashboard = () => {
     }
 
     const current = data?.current || { nifty: 0, nasdaq: 0, gold: 0 };
-    const weekly = data?.weekly || { nifty: { change: 0, percent: 0 }, nasdaq: { change: 0, percent: 0 }, gold: { change: 0, percent: 0 } };
-    const monthly = data?.monthly || { nifty: { change: 0, percent: 0 }, nasdaq: { change: 0, percent: 0 }, gold: { change: 0, percent: 0 } };
+    const weekly = data?.weekly || {
+        nifty: { change: 0, percent: 0, openingPrice: 0, closingPrice: 0 },
+        nasdaq: { change: 0, percent: 0, openingPrice: 0, closingPrice: 0 },
+        gold: { change: 0, percent: 0, openingPrice: 0, closingPrice: 0 }
+    };
+    const monthly = data?.monthly || {
+        nifty: { change: 0, percent: 0, openingPrice: 0, closingPrice: 0 },
+        nasdaq: { change: 0, percent: 0, openingPrice: 0, closingPrice: 0 },
+        gold: { change: 0, percent: 0, openingPrice: 0, closingPrice: 0 }
+    };
 
     return (
         <div className="dashboard-container" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
@@ -98,63 +106,33 @@ const Dashboard = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '40px' }}>
                 <PriceCard
                     title="Nifty 50"
-                    openingPrice={weekly.openingPrices?.nifty}
-                    closingPrice={weekly.closingPrices?.nifty}
+                    openingPrice={weekly.nifty.openingPrice}
+                    closingPrice={weekly.nifty.closingPrice}
                     performance={weekly.nifty}
-                    startDate={weekly.startDate}
-                    endDate={weekly.endDate}
+                    startDate={weekly.nifty.startDate}
+                    endDate={weekly.nifty.endDate}
                 />
                 <PriceCard
                     title="Nasdaq 100"
-                    openingPrice={weekly.openingPrices?.nasdaq}
-                    closingPrice={weekly.closingPrices?.nasdaq}
+                    openingPrice={weekly.nasdaq.openingPrice}
+                    closingPrice={weekly.nasdaq.closingPrice}
                     performance={weekly.nasdaq}
                     currency="$"
-                    startDate={weekly.startDate}
-                    endDate={weekly.endDate}
+                    startDate={weekly.nasdaq.startDate}
+                    endDate={weekly.nasdaq.endDate}
                 />
                 <PriceCard
                     title="Gold 24K (1g)"
-                    openingPrice={weekly.openingPrices?.gold}
-                    closingPrice={weekly.closingPrices?.gold}
+                    openingPrice={weekly.gold.openingPrice}
+                    closingPrice={weekly.gold.closingPrice}
                     performance={weekly.gold}
-                    startDate={weekly.startDate}
-                    endDate={weekly.endDate}
+                    startDate={weekly.gold.startDate}
+                    endDate={weekly.gold.endDate}
                 />
             </div>
 
             {/* Monthly Performance Section */}
             <h2 style={{ fontSize: '1.2em', marginBottom: '15px', borderBottom: '1px solid #333', paddingBottom: '10px' }}>Monthly Performance</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '40px' }}>
-                <PriceCard
-                    title="Nifty 50"
-                    openingPrice={monthly.openingPrices?.nifty}
-                    closingPrice={monthly.closingPrices?.nifty}
-                    performance={monthly.nifty}
-                    startDate={monthly.startDate}
-                    endDate={monthly.endDate}
-                />
-                <PriceCard
-                    title="Nasdaq 100"
-                    openingPrice={monthly.openingPrices?.nasdaq}
-                    closingPrice={monthly.closingPrices?.nasdaq}
-                    performance={monthly.nasdaq}
-                    currency="$"
-                    startDate={monthly.startDate}
-                    endDate={monthly.endDate}
-                />
-                <PriceCard
-                    title="Gold 24K (1g)"
-                    openingPrice={monthly.openingPrices?.gold}
-                    closingPrice={monthly.closingPrices?.gold}
-                    performance={monthly.gold}
-                    startDate={monthly.startDate}
-                    endDate={monthly.endDate}
-                />
-            </div>
 
-        </div>
-    );
-};
-
-export default Dashboard;
+                export default Dashboard;

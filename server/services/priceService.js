@@ -138,37 +138,49 @@ const getPriceAnalysis = async () => {
                 date: current.captured_at
             },
             weekly: {
-                nifty: calculateChange(weekLatestClose?.nifty, weekMondayOpen?.nifty),
-                nasdaq: calculateChange(weekLatestClose?.nasdaq, weekMondayOpen?.nasdaq),
-                gold: calculateChange(weekLatestGold?.gold_24k_per_10g, weekMondayGold?.gold_24k_per_10g),
-                startDate: weekMondayOpen?.captured_at || weekMondayGold?.captured_at,
-                endDate: weekLatestClose?.captured_at || weekLatestGold?.captured_at,
-                openingPrices: {
-                    nifty: Number(weekMondayOpen?.nifty) || 0,
-                    nasdaq: Number(weekMondayOpen?.nasdaq) || 0,
-                    gold: Number(weekMondayGold?.gold_24k_per_10g) || 0
+                nifty: {
+                    ...calculateChange(weekLatestClose?.nifty, weekMondayOpen?.nifty),
+                    openingPrice: Number(weekMondayOpen?.nifty) || 0,
+                    closingPrice: Number(weekLatestClose?.nifty) || 0,
+                    startDate: weekMondayOpen?.captured_at,
+                    endDate: weekLatestClose?.captured_at
                 },
-                closingPrices: {
-                    nifty: Number(weekLatestClose?.nifty) || 0,
-                    nasdaq: Number(weekLatestClose?.nasdaq) || 0,
-                    gold: Number(weekLatestGold?.gold_24k_per_10g) || 0
+                nasdaq: {
+                    ...calculateChange(weekLatestClose?.nasdaq, weekMondayOpen?.nasdaq),
+                    openingPrice: Number(weekMondayOpen?.nasdaq) || 0,
+                    closingPrice: Number(weekLatestClose?.nasdaq) || 0,
+                    startDate: weekMondayOpen?.captured_at,
+                    endDate: weekLatestClose?.captured_at
+                },
+                gold: {
+                    ...calculateChange(weekLatestGold?.gold_24k_per_10g, weekMondayGold?.gold_24k_per_10g),
+                    openingPrice: Number(weekMondayGold?.gold_24k_per_10g) || 0,
+                    closingPrice: Number(weekLatestGold?.gold_24k_per_10g) || 0,
+                    startDate: weekMondayGold?.captured_at,
+                    endDate: weekLatestGold?.captured_at
                 }
             },
             monthly: {
-                nifty: calculateChange(monthLatestClose?.nifty, monthStartOpen?.nifty),
-                nasdaq: calculateChange(monthLatestClose?.nasdaq, monthStartOpen?.nasdaq),
-                gold: calculateChange(monthLatestGold?.gold_24k_per_10g, monthStartGold?.gold_24k_per_10g),
-                startDate: monthStartOpen?.captured_at || monthStartGold?.captured_at,
-                endDate: monthLatestClose?.captured_at || monthLatestGold?.captured_at,
-                openingPrices: {
-                    nifty: Number(monthStartOpen?.nifty) || 0,
-                    nasdaq: Number(monthStartOpen?.nasdaq) || 0,
-                    gold: Number(monthStartGold?.gold_24k_per_10g) || 0
+                nifty: {
+                    ...calculateChange(monthLatestClose?.nifty, monthStartOpen?.nifty),
+                    openingPrice: Number(monthStartOpen?.nifty) || 0,
+                    closingPrice: Number(monthLatestClose?.nifty) || 0,
+                    startDate: monthStartOpen?.captured_at,
+                    endDate: monthLatestClose?.captured_at
                 },
-                closingPrices: {
-                    nifty: Number(monthLatestClose?.nifty) || 0,
-                    nasdaq: Number(monthLatestClose?.nasdaq) || 0,
-                    gold: Number(monthLatestGold?.gold_24k_per_10g) || 0
+                nasdaq: {
+                    ...calculateChange(monthLatestClose?.nasdaq, monthStartOpen?.nasdaq),
+                    openingPrice: Number(monthStartOpen?.nasdaq) || 0,
+                    closingPrice: Number(monthLatestClose?.nasdaq) || 0,
+                    startDate: monthStartOpen?.captured_at,
+                    endDate: monthLatestClose?.captured_at
+                },
+                gold: {
+                    ...calculateChange(monthLatestGold?.gold_24k_per_10g, monthStartGold?.gold_24k_per_10g),
+                    openingPrice: Number(monthStartGold?.gold_24k_per_10g) || 0,
+                    closingPrice: Number(monthLatestGold?.gold_24k_per_10g) || 0,
+                    startDate: monthStartGold?.captured_at,
+                    endDate: monthLatestGold?.captured_at
                 }
             }
         };
