@@ -22,13 +22,13 @@ const initCronJobs = () => {
     // NASDAQ - Evening Capture (8:05 PM IST daily)
     cron.schedule('5 20 * * *', async () => {
         console.log("Running Nasdaq Evening Capture (IST)...");
-        await captureService.captureAll('nasdaq_evening');
+        await captureService.captureAll('nasdaq_closing');
     }, { timezone: TZ });
 
     // NASDAQ - Morning Capture (2:35 AM IST daily)
     cron.schedule('35 2 * * *', async () => {
         console.log("Running Nasdaq Morning Capture (IST)...");
-        await captureService.captureAll('nasdaq_morning');
+        await captureService.captureAll('nasdaq_opening');
     }, { timezone: TZ });
 
     // GOLD - Daily Capture (8:00 AM IST daily)

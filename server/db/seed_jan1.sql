@@ -29,7 +29,7 @@ VALUES
     false,              -- nasdaq_changed
     false,              -- gold_changed
     NULL,               -- tags
-    true                -- scraping_success
+    true                -- scraping_successI d
 ),
 (
     26197.55,           -- nifty
