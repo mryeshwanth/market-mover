@@ -85,7 +85,7 @@ const Dashboard = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '40px' }}>
                 <PriceCard title="Nifty 50" price={current.nifty} performance={weekly.nifty} startDate={weekly.startDate} endDate={weekly.endDate} />
                 <PriceCard title="Nasdaq 100" price={current.nasdaq} performance={weekly.nasdaq} currency="$" startDate={weekly.startDate} endDate={weekly.endDate} />
-                <PriceCard title="Gold 24K (10g)" price={current.gold} performance={weekly.gold} startDate={weekly.startDate} endDate={weekly.endDate} />
+                <PriceCard title="Gold 24K (1g)" price={current.gold} performance={weekly.gold} startDate={weekly.startDate} endDate={weekly.endDate} />
             </div>
 
             {/* Monthly Performance Section */}
@@ -93,7 +93,7 @@ const Dashboard = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '40px' }}>
                 <PriceCard title="Nifty 50" price={current.nifty} performance={monthly.nifty} startDate={monthly.startDate} endDate={monthly.endDate} />
                 <PriceCard title="Nasdaq 100" price={current.nasdaq} performance={monthly.nasdaq} currency="$" startDate={monthly.startDate} endDate={monthly.endDate} />
-                <PriceCard title="Gold 24K (10g)" price={current.gold} performance={monthly.gold} startDate={monthly.startDate} endDate={monthly.endDate} />
+                <PriceCard title="Gold 24K (1g)" price={current.gold} performance={monthly.gold} startDate={monthly.startDate} endDate={monthly.endDate} />
             </div>
 
         </div>
