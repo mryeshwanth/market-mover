@@ -54,12 +54,16 @@ const getPriceAnalysis = async () => {
             weekly: {
                 nifty: calculateChange(current.nifty, weekData?.nifty),
                 nasdaq: calculateChange(current.nasdaq, weekData?.nasdaq),
-                gold: calculateChange(current.gold_24k_per_10g, weekData?.gold_24k_per_10g)
+                gold: calculateChange(current.gold_24k_per_10g, weekData?.gold_24k_per_10g),
+                startDate: weekData?.captured_at || null,
+                endDate: current.captured_at
             },
             monthly: {
                 nifty: calculateChange(current.nifty, monthData?.nifty),
                 nasdaq: calculateChange(current.nasdaq, monthData?.nasdaq),
-                gold: calculateChange(current.gold_24k_per_10g, monthData?.gold_24k_per_10g)
+                gold: calculateChange(current.gold_24k_per_10g, monthData?.gold_24k_per_10g),
+                startDate: monthData?.captured_at || null,
+                endDate: current.captured_at
             }
         };
 
