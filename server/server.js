@@ -53,16 +53,8 @@ app.get('*', (req, res) => {
 // Live Price Endpoint
 app.get('/api/prices/current', async (req, res) => {
     try {
-        const stockPrices = await require('./services/yahooFinance').getMarketPrices();
-        const goldData = await require('./services/goldScraper').scrapeGoldPrice();
-
-        // Combine data
-        res.json({
-            nifty: stockPrices.nifty,
-            nasdaq: stockPrices.nasdaq,
-            gold: goldData.price,
-            timestamp: new Date()
-        });
+        const analysis = await require('./services/priceService').getPriceAnalysis();
+        res.json(analysis);
     } catch (e) {
         console.error("Error fetching live prices:", e);
         res.status(500).json({ error: "Failed to fetch live prices" });
