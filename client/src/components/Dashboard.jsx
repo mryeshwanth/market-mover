@@ -1,17 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { RefreshCw, TrendingUp, TrendingDown } from 'lucide-react';
+import { RefreshCw, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { fetchLivePrices } from '../services/api';
 
+const PriceCard = ({ title, price, performance, currency = '₹' }) => {
+    const isPositive = performance.change >= 0;
+    const isNeutral = performance.change === 0;
+    const color = isNeutral ? '#888' : (isPositive ? '#4caf50' : '#f44336');
+    const Icon = isNeutral ? Minus : (isPositive ? TrendingUp : TrendingDown);
+
+    return (
+        <div className="card" style={{ background: '#ffffff', color: '#000000', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+            <h3 style={{ margin: '0 0 10px 0', color: '#666', fontSize: '0.9em', textTransform: 'uppercase', letterSpacing: '1px' }}>{title}</h3>
+            <div style={{ fontSize: '2.5em', fontWeight: 'bold', color: '#000' }}>
+                {currency}{price ? price.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '---'}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: color, marginTop: '10px', fontWeight: '600' }}>
+                <Icon size={20} />
+                {Math.abs(performance.percent).toFixed(2)}%
+                <span style={{ color: '#888', fontSize: '0.8em', fontWeight: '400' }}>
+                    ({performance.change > 0 ? '+' : ''}{performance.change.toFixed(2)})
+                </span>
+            </div>
+        </div>
+    );
+};
+
 const Dashboard = () => {
-    const [data, setData] = useState({ nifty: 0, nasdaq: 0, gold: 0 });
+    const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
 
     const loadData = async () => {
         setLoading(true);
-        const prices = await fetchLivePrices();
-        if (prices) {
-            setData(prices);
+        const result = await fetchLivePrices();
+        if (result) {
+            setData(result);
         }
         setLoading(false);
     };
@@ -20,14 +43,11 @@ const Dashboard = () => {
         loadData();
     }, []);
 
-    // Card Style: White Background, Black Text
-    const cardStyle = {
-        background: '#ffffff',
-        color: '#000000',
-        borderRadius: '12px',
-        padding: '24px',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-    };
+    if (loading && !data) return <div style={{ padding: '20px', color: '#fff' }}>Loading market data...</div>;
+
+    const current = data?.current || { nifty: 0, nasdaq: 0, gold: 0 };
+    const weekly = data?.weekly || { nifty: { change: 0, percent: 0 }, nasdaq: { change: 0, percent: 0 }, gold: { change: 0, percent: 0 } };
+    const monthly = data?.monthly || { nifty: { change: 0, percent: 0 }, nasdaq: { change: 0, percent: 0 }, gold: { change: 0, percent: 0 } };
 
     return (
         <div className="dashboard-container" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
@@ -41,42 +61,20 @@ const Dashboard = () => {
                 </button>
             </header>
 
-            {/* Price Cards Grid */}
+            {/* Weekly Performance Section */}
+            <h2 style={{ fontSize: '1.2em', marginBottom: '15px', borderBottom: '1px solid #333', paddingBottom: '10px' }}>Weekly Performance (Last 7 Days)</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '40px' }}>
+                <PriceCard title="Nifty 50" price={current.nifty} performance={weekly.nifty} />
+                <PriceCard title="Nasdaq 100" price={current.nasdaq} performance={weekly.nasdaq} currency="$" />
+                <PriceCard title="Gold 24K (10g)" price={current.gold} performance={weekly.gold} />
+            </div>
 
-                {/* Nifty Card */}
-                <div className="card" style={cardStyle}>
-                    <h3 style={{ margin: '0 0 10px 0', color: '#666', fontSize: '0.9em', textTransform: 'uppercase', letterSpacing: '1px' }}>Nifty 50</h3>
-                    <div style={{ fontSize: '2.5em', fontWeight: 'bold', color: '#000' }}>
-                        ₹{data.nifty ? data.nifty.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '---'}
-                    </div>
-                    {/* Mock Trend for now until we have history comparison */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#4caf50', marginTop: '10px', fontWeight: '600' }}>
-                        <TrendingUp size={20} /> +0.00% <span style={{ color: '#888', fontSize: '0.8em', fontWeight: '400' }}>(Today)</span>
-                    </div>
-                </div>
-
-                {/* Nasdaq Card */}
-                <div className="card" style={cardStyle}>
-                    <h3 style={{ margin: '0 0 10px 0', color: '#666', fontSize: '0.9em', textTransform: 'uppercase', letterSpacing: '1px' }}>Nasdaq 100</h3>
-                    <div style={{ fontSize: '2.5em', fontWeight: 'bold', color: '#000' }}>
-                        ${data.nasdaq ? data.nasdaq.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '---'}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f44336', marginTop: '10px', fontWeight: '600' }}>
-                        <TrendingDown size={20} /> -0.00% <span style={{ color: '#888', fontSize: '0.8em', fontWeight: '400' }}>(Today)</span>
-                    </div>
-                </div>
-
-                {/* Gold Card */}
-                <div className="card" style={cardStyle}>
-                    <h3 style={{ margin: '0 0 10px 0', color: '#666', fontSize: '0.9em', textTransform: 'uppercase', letterSpacing: '1px' }}>Gold 24K (10g)</h3>
-                    <div style={{ fontSize: '2.5em', fontWeight: 'bold', color: '#000' }}>
-                        ₹{data.gold ? data.gold.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '---'}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#4caf50', marginTop: '10px', fontWeight: '600' }}>
-                        <TrendingUp size={20} /> +0.00% <span style={{ color: '#888', fontSize: '0.8em', fontWeight: '400' }}>(Today)</span>
-                    </div>
-                </div>
+            {/* Monthly Performance Section */}
+            <h2 style={{ fontSize: '1.2em', marginBottom: '15px', borderBottom: '1px solid #333', paddingBottom: '10px' }}>Monthly Performance (Last 30 Days)</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '40px' }}>
+                <PriceCard title="Nifty 50" price={current.nifty} performance={monthly.nifty} />
+                <PriceCard title="Nasdaq 100" price={current.nasdaq} performance={monthly.nasdaq} currency="$" />
+                <PriceCard title="Gold 24K (10g)" price={current.gold} performance={monthly.gold} />
             </div>
 
             {/* Chart Section */}
