@@ -2,6 +2,9 @@ const { pool } = require('../database');
 
 const seedData = async () => {
     try {
+        if (!process.env.DATABASE_URL) {
+            throw new Error("DATABASE_URL is missing. Please run this script with 'railway run node ...' to inject environment variables.");
+        }
         console.log('Starting seed migration for Jan 1, 2026...');
 
         const query = `
