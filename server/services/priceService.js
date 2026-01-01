@@ -15,48 +15,86 @@ const getPriceAnalysis = async () => {
         const current = currentRes.rows[0] || { nifty: 0, nasdaq: 0, gold_24k_per_10g: 0 };
         const currentDate = moment(current.captured_at);
 
-        // Helper to get the start of current week (Monday)
-        const getCurrentWeekStart = () => {
-            return currentDate.clone().startOf('isoWeek'); // ISO week starts on Monday
+        // Helper: Get Monday of current week
+        const getCurrentWeekMonday = () => {
+            return currentDate.clone().startOf('isoWeek'); // Monday
         };
 
-        // Helper to get the start of previous week (Monday)
-        const getPreviousWeekStart = () => {
-            return currentDate.clone().subtract(1, 'week').startOf('isoWeek');
+        // Helper: Get Friday of current week
+        const getCurrentWeekFriday = () => {
+            return currentDate.clone().startOf('isoWeek').add(4, 'days'); // Friday
         };
 
-        // Helper to get the start of current month
+        // Helper: Get 1st of current month
         const getCurrentMonthStart = () => {
             return currentDate.clone().startOf('month');
         };
 
-        // Helper to get the start of previous month
-        const getPreviousMonthStart = () => {
-            return currentDate.clone().subtract(1, 'month').startOf('month');
+        // Helper: Get last day of current month
+        const getCurrentMonthEnd = () => {
+            return currentDate.clone().endOf('month');
         };
 
-        // Get data from specific date range
-        const getDataFromDate = async (startDate) => {
+        // Get opening price (morning capture) for a specific date
+        const getOpeningPrice = async (date) => {
             const query = `
                 SELECT * FROM price_captures 
-                WHERE captured_at >= $1 
+                WHERE captured_at::date = $1 
+                AND capture_time = 'opening_price'
                 ORDER BY captured_at ASC 
                 LIMIT 1
             `;
-            const res = await pool.query(query, [startDate.format('YYYY-MM-DD')]);
+            const res = await pool.query(query, [date.format('YYYY-MM-DD')]);
             return res.rows[0] || null;
         };
 
-        // 2. Get comparison data
-        const weekStartData = await getDataFromDate(getCurrentWeekStart());
-        const prevWeekStartData = await getDataFromDate(getPreviousWeekStart());
-        const monthStartData = await getDataFromDate(getCurrentMonthStart());
-        const prevMonthStartData = await getDataFromDate(getPreviousMonthStart());
+        // Get closing price (evening capture) for a specific date
+        const getClosingPrice = async (date) => {
+            const query = `
+                SELECT * FROM price_captures 
+                WHERE captured_at::date = $1 
+                AND capture_time = 'closing_price'
+                ORDER BY captured_at DESC 
+                LIMIT 1
+            `;
+            const res = await pool.query(query, [date.format('YYYY-MM-DD')]);
+            return res.rows[0] || null;
+        };
+
+        // Get Gold price at 8 AM for a specific date
+        const getGoldPrice = async (date) => {
+            const query = `
+                SELECT * FROM price_captures 
+                WHERE captured_at::date = $1 
+                AND capture_time = 'gold_daily'
+                ORDER BY captured_at ASC 
+                LIMIT 1
+            `;
+            const res = await pool.query(query, [date.format('YYYY-MM-DD')]);
+            return res.rows[0] || null;
+        };
+
+        // 2. Get period data
+        // Weekly: Monday opening to Friday closing
+        const weekMondayOpen = await getOpeningPrice(getCurrentWeekMonday());
+        const weekFridayClose = await getClosingPrice(getCurrentWeekFriday());
+
+        // For Gold: Monday 8AM to Sunday 8AM (7 days later)
+        const weekMondayGold = await getGoldPrice(getCurrentWeekMonday());
+        const weekSundayGold = await getGoldPrice(getCurrentWeekMonday().add(6, 'days')); // Sunday
+
+        // Monthly: 1st opening to last day closing
+        const monthStartOpen = await getOpeningPrice(getCurrentMonthStart());
+        const monthEndClose = await getClosingPrice(getCurrentMonthEnd());
+
+        // For Gold: 1st 8AM to last day 8AM
+        const monthStartGold = await getGoldPrice(getCurrentMonthStart());
+        const monthEndGold = await getGoldPrice(getCurrentMonthEnd());
 
         // 3. Calculate Changes
-        const calculateChange = (currentVal, startVal) => {
-            if (!currentVal || !startVal) return { change: 0, percent: 0 };
-            const diff = Number(currentVal) - Number(startVal);
+        const calculateChange = (endVal, startVal) => {
+            if (!endVal || !startVal) return { change: 0, percent: 0 };
+            const diff = Number(endVal) - Number(startVal);
             const percent = (diff / Number(startVal)) * 100;
             return {
                 change: diff,
@@ -72,22 +110,18 @@ const getPriceAnalysis = async () => {
                 date: current.captured_at
             },
             weekly: {
-                nifty: calculateChange(current.nifty, weekStartData?.nifty || prevWeekStartData?.nifty),
-                nasdaq: calculateChange(current.nasdaq, weekStartData?.nasdaq || prevWeekStartData?.nasdaq),
-                gold: calculateChange(current.gold_24k_per_10g, weekStartData?.gold_24k_per_10g || prevWeekStartData?.gold_24k_per_10g),
-                startDate: (weekStartData?.captured_at || prevWeekStartData?.captured_at),
-                endDate: current.captured_at,
-                weekStart: getCurrentWeekStart().format('YYYY-MM-DD'),
-                prevWeekStart: getPreviousWeekStart().format('YYYY-MM-DD')
+                nifty: calculateChange(weekFridayClose?.nifty, weekMondayOpen?.nifty),
+                nasdaq: calculateChange(weekFridayClose?.nasdaq, weekMondayOpen?.nasdaq),
+                gold: calculateChange(weekSundayGold?.gold_24k_per_10g, weekMondayGold?.gold_24k_per_10g),
+                startDate: weekMondayOpen?.captured_at || weekMondayGold?.captured_at,
+                endDate: weekFridayClose?.captured_at || weekSundayGold?.captured_at
             },
             monthly: {
-                nifty: calculateChange(current.nifty, monthStartData?.nifty || prevMonthStartData?.nifty),
-                nasdaq: calculateChange(current.nasdaq, monthStartData?.nasdaq || prevMonthStartData?.nasdaq),
-                gold: calculateChange(current.gold_24k_per_10g, monthStartData?.gold_24k_per_10g || prevMonthStartData?.gold_24k_per_10g),
-                startDate: (monthStartData?.captured_at || prevMonthStartData?.captured_at),
-                endDate: current.captured_at,
-                monthStart: getCurrentMonthStart().format('YYYY-MM-DD'),
-                prevMonthStart: getPreviousMonthStart().format('YYYY-MM-DD')
+                nifty: calculateChange(monthEndClose?.nifty, monthStartOpen?.nifty),
+                nasdaq: calculateChange(monthEndClose?.nasdaq, monthStartOpen?.nasdaq),
+                gold: calculateChange(monthEndGold?.gold_24k_per_10g, monthStartGold?.gold_24k_per_10g),
+                startDate: monthStartOpen?.captured_at || monthStartGold?.captured_at,
+                endDate: monthEndClose?.captured_at || monthEndGold?.captured_at
             }
         };
 

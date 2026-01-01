@@ -7,23 +7,22 @@ const TZ = "Asia/Kolkata";
 const initCronJobs = () => {
     console.log("Initializing Cron Jobs...");
 
-    // INDIAN STOCKS - Morning Capture (9:20 AM IST daily)
+    // INDIAN STOCKS - Opening Price (9:20 AM IST daily)
     cron.schedule('20 9 * * *', async () => {
-        console.log("Running Morning Capture...");
-        await captureService.captureAll('morning');
+        console.log("Running Opening Price Capture...");
+        await captureService.captureAll('opening_price');
     }, { timezone: TZ });
 
-    // INDIAN STOCKS - Evening Capture (3:35 PM IST daily)
+    // INDIAN STOCKS - Closing Price (3:35 PM IST daily)
     cron.schedule('35 15 * * *', async () => {
-        console.log("Running Evening Capture...");
-        await captureService.captureAll('evening');
+        console.log("Running Closing Price Capture...");
+        await captureService.captureAll('closing_price');
     }, { timezone: TZ });
 
     // NASDAQ - Evening Capture (8:05 PM IST daily)
     cron.schedule('5 20 * * *', async () => {
         console.log("Running Nasdaq Evening Capture (IST)...");
         await captureService.captureAll('nasdaq_evening');
-        // Note: Using 'nasdaq_evening' to differentiate if needed, or just map to 'evening'
     }, { timezone: TZ });
 
     // NASDAQ - Morning Capture (2:35 AM IST daily)
