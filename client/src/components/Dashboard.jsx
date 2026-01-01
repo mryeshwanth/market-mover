@@ -78,25 +78,27 @@ const Dashboard = () => {
             </div>
 
             {/* Chart Section */}
-            <section style={{ height: '400px', background: '#1e1e1e', borderRadius: '12px', padding: '20px' }}>
+            <section style={{ height: '400px', width: '100%', minWidth: 0, background: '#1e1e1e', borderRadius: '12px', padding: '20px', boxSizing: 'border-box' }}>
                 <h3 style={{ marginBottom: '20px' }}>Performance Trend (Mock)</h3>
-                <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={[
-                        { name: 'Mon', nifty: 21200, nasdaq: 16400 },
-                        { name: 'Tue', nifty: 21350, nasdaq: 16450 },
-                        { name: 'Wed', nifty: 21300, nasdaq: 16480 },
-                        { name: 'Thu', nifty: 21450, nasdaq: 16500 },
-                        { name: 'Fri', nifty: 21500, nasdaq: 16550 },
-                    ]}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                        <XAxis dataKey="name" stroke="#666" />
-                        <YAxis stroke="#666" />
-                        <Tooltip contentStyle={{ backgroundColor: '#333', border: 'none' }} />
-                        <Legend />
-                        <Line type="monotone" dataKey="nifty" stroke="#8884d8" name="Nifty 50" />
-                        <Line type="monotone" dataKey="nasdaq" stroke="#82ca9d" name="Nasdaq 100" />
-                    </LineChart>
-                </ResponsiveContainer>
+                <div style={{ width: '100%', height: 'calc(100% - 40px)' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={[
+                            { name: 'Mon', nifty: 21200, nasdaq: 16400 },
+                            { name: 'Tue', nifty: 21350, nasdaq: 16450 },
+                            { name: 'Wed', nifty: 21300, nasdaq: 16480 },
+                            { name: 'Thu', nifty: 21450, nasdaq: 16500 },
+                            { name: 'Fri', nifty: 21500, nasdaq: 16550 },
+                        ]}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                            <XAxis dataKey="name" stroke="#666" />
+                            <YAxis stroke="#666" />
+                            <Tooltip contentStyle={{ backgroundColor: '#333', border: 'none' }} />
+                            <Legend />
+                            <Line type="monotone" dataKey="nifty" stroke="#8884d8" name="Nifty 50" />
+                            <Line type="monotone" dataKey="nasdaq" stroke="#82ca9d" name="Nasdaq 100" />
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
             </section>
 
         </div>

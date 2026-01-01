@@ -32,8 +32,8 @@ const initCronJobs = () => {
         await captureService.captureAll('nasdaq_morning');
     }, { timezone: TZ });
 
-    // GOLD - Daily Capture (12:00 PM IST daily)
-    cron.schedule('0 12 * * *', async () => {
+    // GOLD - Daily Capture (8:00 AM IST daily)
+    cron.schedule('0 8 * * *', async () => {
         console.log("Running Gold Daily Capture...");
         await captureService.captureAll('gold_daily');
     }, { timezone: TZ });
