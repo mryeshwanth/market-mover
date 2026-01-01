@@ -22,18 +22,30 @@ app.get('/api/health', (req, res) => {
 
 const { initCronJobs } = require('./services/cronJobs');
 const captureService = require('./services/captureService');
+const { initDatabase } = require('./db/init');
 
 // Start server
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Timezone: ${process.env.TZ || 'UTC'}`);
+const startServer = async () => {
+    try {
+        // Initialize Database
+        await initDatabase();
 
-    // Initialize Cron Jobs
-    initCronJobs();
-});
+        app.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+            console.log(`Timezone: ${process.env.TZ || 'UTC'}`);
 
-// The "catchall" handler: for any request that doesn't
-// match one above, send back React's index.html file.
+            // Initialize Cron Jobs
+            initCronJobs();
+        });
+    } catch (e) {
+        console.error("Failed to start server:", e);
+        process.exit(1);
+    }
+};
+
+startServer();
+
+// The "catchall" handler
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../client/dist/index.html'));
 });
