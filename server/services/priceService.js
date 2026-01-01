@@ -40,7 +40,7 @@ const getPriceAnalysis = async () => {
             const query = `
                 SELECT * FROM price_captures 
                 WHERE captured_at::date = $1 
-                AND capture_time = 'opening_price'
+                AND capture_time = 'nifty_opening'
                 ORDER BY captured_at ASC 
                 LIMIT 1
             `;
@@ -53,7 +53,7 @@ const getPriceAnalysis = async () => {
             const query = `
                 SELECT * FROM price_captures 
                 WHERE captured_at::date = $1 
-                AND capture_time = 'closing_price'
+                AND capture_time = 'nifty_closing'
                 ORDER BY captured_at DESC 
                 LIMIT 1
             `;
@@ -67,7 +67,7 @@ const getPriceAnalysis = async () => {
                 SELECT * FROM price_captures 
                 WHERE captured_at::date >= $1 
                 AND captured_at::date <= $2
-                AND capture_time = 'closing_price'
+                AND capture_time = 'nifty_closing'
                 ORDER BY captured_at DESC 
                 LIMIT 1
             `;

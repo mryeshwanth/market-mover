@@ -10,13 +10,13 @@ const initCronJobs = () => {
     // INDIAN STOCKS - Opening Price (9:20 AM IST daily)
     cron.schedule('20 9 * * *', async () => {
         console.log("Running Opening Price Capture...");
-        await captureService.captureAll('opening_price');
+        await captureService.captureAll('nifty_opening');
     }, { timezone: TZ });
 
     // INDIAN STOCKS - Closing Price (3:35 PM IST daily)
     cron.schedule('35 15 * * *', async () => {
         console.log("Running Closing Price Capture...");
-        await captureService.captureAll('closing_price');
+        await captureService.captureAll('nifty_closing');
     }, { timezone: TZ });
 
     // NASDAQ - Evening Capture (8:05 PM IST daily)
