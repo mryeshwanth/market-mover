@@ -66,11 +66,8 @@ const Dashboard = () => {
     const loadData = async () => {
         setLoading(true);
         const result = await fetchLivePrices();
-        console.log('Dashboard received data:', result);
         if (result) {
             setData(result);
-        } else {
-            console.error('No data received from API');
         }
         setLoading(false);
     };
