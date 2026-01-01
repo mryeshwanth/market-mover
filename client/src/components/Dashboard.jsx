@@ -134,5 +134,35 @@ const Dashboard = () => {
             {/* Monthly Performance Section */}
             <h2 style={{ fontSize: '1.2em', marginBottom: '15px', borderBottom: '1px solid #333', paddingBottom: '10px' }}>Monthly Performance</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '40px' }}>
+                <PriceCard
+                    title="Nifty 50"
+                    openingPrice={monthly.nifty.openingPrice}
+                    closingPrice={monthly.nifty.closingPrice}
+                    performance={monthly.nifty}
+                    startDate={monthly.nifty.startDate}
+                    endDate={monthly.nifty.endDate}
+                />
+                <PriceCard
+                    title="Nasdaq 100"
+                    openingPrice={monthly.nasdaq.openingPrice}
+                    closingPrice={monthly.nasdaq.closingPrice}
+                    performance={monthly.nasdaq}
+                    currency="$"
+                    startDate={monthly.nasdaq.startDate}
+                    endDate={monthly.nasdaq.endDate}
+                />
+                <PriceCard
+                    title="Gold 24K (1g)"
+                    openingPrice={monthly.gold.openingPrice}
+                    closingPrice={monthly.gold.closingPrice}
+                    performance={monthly.gold}
+                    startDate={monthly.gold.startDate}
+                    endDate={monthly.gold.endDate}
+                />
+            </div>
 
-                export default Dashboard;
+        </div>
+    );
+};
+
+export default Dashboard;
