@@ -61,6 +61,20 @@ const getPriceAnalysis = async () => {
             return res.rows[0] || null;
         };
 
+        // Get latest closing price within a date range
+        const getLatestClosingPrice = async (startDate, endDate) => {
+            const query = `
+                SELECT * FROM price_captures 
+                WHERE captured_at::date >= $1 
+                AND captured_at::date <= $2
+                AND capture_time = 'closing_price'
+                ORDER BY captured_at DESC 
+                LIMIT 1
+            `;
+            const res = await pool.query(query, [startDate.format('YYYY-MM-DD'), endDate.format('YYYY-MM-DD')]);
+            return res.rows[0] || null;
+        };
+
         // Get Gold price at 8 AM for a specific date
         const getGoldPrice = async (date) => {
             const query = `
@@ -74,22 +88,36 @@ const getPriceAnalysis = async () => {
             return res.rows[0] || null;
         };
 
+        // Get latest Gold price within a date range
+        const getLatestGoldPrice = async (startDate, endDate) => {
+            const query = `
+                SELECT * FROM price_captures 
+                WHERE captured_at::date >= $1 
+                AND captured_at::date <= $2
+                AND capture_time = 'gold_daily'
+                ORDER BY captured_at DESC 
+                LIMIT 1
+            `;
+            const res = await pool.query(query, [startDate.format('YYYY-MM-DD'), endDate.format('YYYY-MM-DD')]);
+            return res.rows[0] || null;
+        };
+
         // 2. Get period data
-        // Weekly: Monday opening to Friday closing
+        // Weekly: Monday opening to latest closing this week
         const weekMondayOpen = await getOpeningPrice(getCurrentWeekMonday());
-        const weekFridayClose = await getClosingPrice(getCurrentWeekFriday());
+        const weekLatestClose = await getLatestClosingPrice(getCurrentWeekMonday(), currentDate);
 
-        // For Gold: Monday 8AM to Sunday 8AM (7 days later)
+        // For Gold: Monday 8AM to latest this week
         const weekMondayGold = await getGoldPrice(getCurrentWeekMonday());
-        const weekSundayGold = await getGoldPrice(getCurrentWeekMonday().add(6, 'days')); // Sunday
+        const weekLatestGold = await getLatestGoldPrice(getCurrentWeekMonday(), currentDate);
 
-        // Monthly: 1st opening to last day closing
+        // Monthly: 1st opening to latest closing this month
         const monthStartOpen = await getOpeningPrice(getCurrentMonthStart());
-        const monthEndClose = await getClosingPrice(getCurrentMonthEnd());
+        const monthLatestClose = await getLatestClosingPrice(getCurrentMonthStart(), currentDate);
 
-        // For Gold: 1st 8AM to last day 8AM
+        // For Gold: 1st 8AM to latest this month
         const monthStartGold = await getGoldPrice(getCurrentMonthStart());
-        const monthEndGold = await getGoldPrice(getCurrentMonthEnd());
+        const monthLatestGold = await getLatestGoldPrice(getCurrentMonthStart(), currentDate);
 
         // 3. Calculate Changes
         const calculateChange = (endVal, startVal) => {
