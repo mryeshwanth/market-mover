@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { fetchLivePrices } from '../services/api';
 
-const PriceCard = ({ title, price, performance, currency = '₹', startDate, endDate }) => {
+const PriceCard = ({ title, openingPrice, closingPrice, performance, currency = '₹', startDate, endDate }) => {
     const isPositive = performance.change >= 0;
     const isNeutral = performance.change === 0;
     const color = isNeutral ? '#888' : (isPositive ? '#4caf50' : '#f44336');
@@ -22,21 +22,37 @@ const PriceCard = ({ title, price, performance, currency = '₹', startDate, end
 
     return (
         <div className="card" style={{ background: '#ffffff', color: '#000000', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-            <h3 style={{ margin: '0 0 10px 0', color: '#666', fontSize: '0.9em', textTransform: 'uppercase', letterSpacing: '1px' }}>{title}</h3>
-            <div style={{ fontSize: '2.5em', fontWeight: 'bold', color: '#000' }}>
-                {currency}{(price !== null && price !== undefined) ? price.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '---'}
+            <h3 style={{ margin: '0 0 20px 0', color: '#666', fontSize: '0.9em', textTransform: 'uppercase', letterSpacing: '1px', textAlign: 'center' }}>{title}</h3>
+
+            {/* Row 1: Opening and Closing Labels */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '0.85em', color: '#888', fontWeight: '600' }}>OPENING</span>
+                <span style={{ fontSize: '0.85em', color: '#888', fontWeight: '600' }}>CLOSING</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: color, marginTop: '10px', fontWeight: '600' }}>
-                <Icon size={20} />
-                {Math.abs(performance.percent).toFixed(2)}%
-                <span style={{ color: '#888', fontSize: '0.8em', fontWeight: '400' }}>
-                    ({performance.change > 0 ? '+' : ''}{performance.change.toFixed(2)})
+
+            {/* Row 2: Opening and Closing Prices */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <span style={{ fontSize: '1.5em', fontWeight: 'bold', color: '#000' }}>
+                    {currency}{(openingPrice !== null && openingPrice !== undefined) ? openingPrice.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '---'}
+                </span>
+                <span style={{ fontSize: '1.5em', fontWeight: 'bold', color: '#000' }}>
+                    {currency}{(closingPrice !== null && closingPrice !== undefined) ? closingPrice.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '---'}
                 </span>
             </div>
+
+            {/* Row 3: Percentage and Change Amount */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: color, fontWeight: '600', fontSize: '1.1em' }}>
+                <Icon size={20} />
+                {Math.abs(performance.percent).toFixed(2)}%
+                <span style={{ fontSize: '0.9em' }}>
+                    ({performance.change > 0 ? '+' : ''}{currency}{Math.abs(performance.change).toFixed(2)})
+                </span>
+            </div>
+
+            {/* Timestamps */}
             {startDate && endDate && (
-                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #eee', fontSize: '0.75em', color: '#666' }}>
-                    <div><strong>Start:</strong> {formatDate(startDate)} {formatTime(startDate)}</div>
-                    <div><strong>End:</strong> {formatDate(endDate)} {formatTime(endDate)}</div>
+                <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #eee', fontSize: '0.7em', color: '#999', textAlign: 'center' }}>
+                    <div>{formatDate(startDate)} {formatTime(startDate)} → {formatDate(endDate)} {formatTime(endDate)}</div>
                 </div>
             )}
         </div>
@@ -81,19 +97,63 @@ const Dashboard = () => {
             </header>
 
             {/* Weekly Performance Section */}
-            <h2 style={{ fontSize: '1.2em', marginBottom: '15px', borderBottom: '1px solid #333', paddingBottom: '10px' }}>Weekly Performance (Last 7 Days)</h2>
+            <h2 style={{ fontSize: '1.2em', marginBottom: '15px', borderBottom: '1px solid #333', paddingBottom: '10px' }}>Weekly Performance</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '40px' }}>
-                <PriceCard title="Nifty 50" price={current.nifty} performance={weekly.nifty} startDate={weekly.startDate} endDate={weekly.endDate} />
-                <PriceCard title="Nasdaq 100" price={current.nasdaq} performance={weekly.nasdaq} currency="$" startDate={weekly.startDate} endDate={weekly.endDate} />
-                <PriceCard title="Gold 24K (1g)" price={current.gold} performance={weekly.gold} startDate={weekly.startDate} endDate={weekly.endDate} />
+                <PriceCard
+                    title="Nifty 50"
+                    openingPrice={weekly.openingPrices?.nifty}
+                    closingPrice={weekly.closingPrices?.nifty}
+                    performance={weekly.nifty}
+                    startDate={weekly.startDate}
+                    endDate={weekly.endDate}
+                />
+                <PriceCard
+                    title="Nasdaq 100"
+                    openingPrice={weekly.openingPrices?.nasdaq}
+                    closingPrice={weekly.closingPrices?.nasdaq}
+                    performance={weekly.nasdaq}
+                    currency="$"
+                    startDate={weekly.startDate}
+                    endDate={weekly.endDate}
+                />
+                <PriceCard
+                    title="Gold 24K (1g)"
+                    openingPrice={weekly.openingPrices?.gold}
+                    closingPrice={weekly.closingPrices?.gold}
+                    performance={weekly.gold}
+                    startDate={weekly.startDate}
+                    endDate={weekly.endDate}
+                />
             </div>
 
             {/* Monthly Performance Section */}
-            <h2 style={{ fontSize: '1.2em', marginBottom: '15px', borderBottom: '1px solid #333', paddingBottom: '10px' }}>Monthly Performance (Last 30 Days)</h2>
+            <h2 style={{ fontSize: '1.2em', marginBottom: '15px', borderBottom: '1px solid #333', paddingBottom: '10px' }}>Monthly Performance</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '40px' }}>
-                <PriceCard title="Nifty 50" price={current.nifty} performance={monthly.nifty} startDate={monthly.startDate} endDate={monthly.endDate} />
-                <PriceCard title="Nasdaq 100" price={current.nasdaq} performance={monthly.nasdaq} currency="$" startDate={monthly.startDate} endDate={monthly.endDate} />
-                <PriceCard title="Gold 24K (1g)" price={current.gold} performance={monthly.gold} startDate={monthly.startDate} endDate={monthly.endDate} />
+                <PriceCard
+                    title="Nifty 50"
+                    openingPrice={monthly.openingPrices?.nifty}
+                    closingPrice={monthly.closingPrices?.nifty}
+                    performance={monthly.nifty}
+                    startDate={monthly.startDate}
+                    endDate={monthly.endDate}
+                />
+                <PriceCard
+                    title="Nasdaq 100"
+                    openingPrice={monthly.openingPrices?.nasdaq}
+                    closingPrice={monthly.closingPrices?.nasdaq}
+                    performance={monthly.nasdaq}
+                    currency="$"
+                    startDate={monthly.startDate}
+                    endDate={monthly.endDate}
+                />
+                <PriceCard
+                    title="Gold 24K (1g)"
+                    openingPrice={monthly.openingPrices?.gold}
+                    closingPrice={monthly.closingPrices?.gold}
+                    performance={monthly.gold}
+                    startDate={monthly.startDate}
+                    endDate={monthly.endDate}
+                />
             </div>
 
         </div>
