@@ -13,7 +13,7 @@ const PriceCard = ({ title, price, performance, currency = '₹' }) => {
         <div className="card" style={{ background: '#ffffff', color: '#000000', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
             <h3 style={{ margin: '0 0 10px 0', color: '#666', fontSize: '0.9em', textTransform: 'uppercase', letterSpacing: '1px' }}>{title}</h3>
             <div style={{ fontSize: '2.5em', fontWeight: 'bold', color: '#000' }}>
-                {currency}{price ? price.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '---'}
+                {currency}{(price !== null && price !== undefined) ? price.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '---'}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: color, marginTop: '10px', fontWeight: '600' }}>
                 <Icon size={20} />
