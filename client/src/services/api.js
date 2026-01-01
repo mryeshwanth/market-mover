@@ -11,9 +11,11 @@ const api = axios.create({
 export const fetchLivePrices = async () => {
     try {
         const response = await api.get('/prices/current');
+        console.log('API Response:', response.data);
         return response.data;
     } catch (error) {
         console.error("Error fetching live prices", error);
+        console.error("Error details:", error.response?.data);
         return null;
     }
 };

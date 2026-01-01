@@ -33,8 +33,11 @@ const Dashboard = () => {
     const loadData = async () => {
         setLoading(true);
         const result = await fetchLivePrices();
+        console.log('Dashboard received data:', result);
         if (result) {
             setData(result);
+        } else {
+            console.error('No data received from API');
         }
         setLoading(false);
     };
@@ -44,6 +47,10 @@ const Dashboard = () => {
     }, []);
 
     if (loading && !data) return <div style={{ padding: '20px', color: '#fff' }}>Loading market data...</div>;
+
+    if (!data) {
+        return <div style={{ padding: '20px', color: '#f44336' }}>Error: Unable to load market data. Check console for details.</div>;
+    }
 
     const current = data?.current || { nifty: 0, nasdaq: 0, gold: 0 };
     const weekly = data?.weekly || { nifty: { change: 0, percent: 0 }, nasdaq: { change: 0, percent: 0 }, gold: { change: 0, percent: 0 } };
