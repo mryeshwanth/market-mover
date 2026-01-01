@@ -11,13 +11,15 @@ const PriceCard = ({ title, openingPrice, closingPrice, performance, currency = 
     const formatDate = (dateStr) => {
         if (!dateStr) return 'N/A';
         const date = new Date(dateStr);
-        return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+        const formattedDate = date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        return `${dayName}, ${formattedDate}`;
     };
 
     const formatTime = (dateStr) => {
         if (!dateStr) return '';
         const date = new Date(dateStr);
-        return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+        return date.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
     };
 
     return (
