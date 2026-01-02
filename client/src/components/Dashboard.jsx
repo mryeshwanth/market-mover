@@ -99,7 +99,7 @@ const Dashboard = () => {
     return (
         <div className="dashboard-container" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
             <header style={{ marginBottom: '30px', textAlign: 'center' }}>
-                <h1 style={{ fontSize: '2em', margin: 0 }}>Market Tracker</h1>
+                <h1 style={{ fontSize: '2em', margin: 0 }}>Market Mover</h1>
             </header>
 
             {/* Weekly Performance Section */}
