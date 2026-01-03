@@ -1,6 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-const { Pool } = require('pg');
 require('dotenv').config();
 
 const app = express();
@@ -16,7 +15,6 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, '../client/dist')));
 
 const { initCronJobs } = require('./services/cronJobs');
-const captureService = require('./services/captureService');
 const { initDatabase } = require('./db/init');
 
 // API Routes - MUST be defined BEFORE the catch-all handler
