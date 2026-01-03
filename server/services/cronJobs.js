@@ -39,34 +39,36 @@ const initCronJobs = () => {
         await captureService.captureAll('nifty_closing');
     }, { timezone: TZ });
 
-    // NASDAQ - Opening Price (Monday 20:00 IST only, or 1st of month if not Monday)
-    cron.schedule('0 20 * * 1', async () => {
-        console.log("Running Nasdaq Opening Price Capture (Monday 20:00 IST)...");
+    // NASDAQ - Opening Price (Monday 19:30 IST - covers both EST 20:00 and EDT 19:00)
+    // The actual timestamp will be calculated dynamically based on EST/EDT
+    cron.schedule('30 19 * * 1', async () => {
+        console.log("Running Nasdaq Opening Price Capture (Monday ~19:30 IST, dynamically adjusted for EST/EDT)...");
         await captureService.captureAll('nasdaq_opening');
     }, { timezone: TZ });
     
-    // NASDAQ - Monthly Opening (1st of month 20:00 IST, if not a Monday)
-    cron.schedule('0 20 1 * *', async () => {
+    // NASDAQ - Monthly Opening (1st of month 19:30 IST, if not a Monday)
+    cron.schedule('30 19 1 * *', async () => {
         const moment = require('moment-timezone');
         const now = moment.tz(TZ);
         // Only run if 1st is not a Monday (Monday is handled by weekly cron)
         if (now.day() !== 1) {
-            console.log("Running Nasdaq Monthly Opening Capture (1st of month 20:00 IST)...");
+            console.log("Running Nasdaq Monthly Opening Capture (1st of month ~19:30 IST, dynamically adjusted for EST/EDT)...");
             await captureService.captureAll('nasdaq_opening');
         }
     }, { timezone: TZ });
 
-    // NASDAQ - Closing Price (Tuesday-Saturday 03:00 IST, also handles monthly closing on last day)
-    cron.schedule('0 3 * * 2-6', async () => {
+    // NASDAQ - Closing Price (Tuesday-Saturday 02:00 IST - covers both EST 02:30 and EDT 01:30)
+    // The actual timestamp will be calculated dynamically based on EST/EDT
+    cron.schedule('0 2 * * 2-6', async () => {
         const moment = require('moment-timezone');
         const now = moment.tz(TZ);
         const lastDayOfMonth = now.clone().endOf('month').date();
         const today = now.date();
         
         if (today === lastDayOfMonth) {
-            console.log("Running Nasdaq Closing Price Capture (Last day of month 03:00 IST)...");
+            console.log("Running Nasdaq Closing Price Capture (Last day of month ~02:00 IST, dynamically adjusted for EST/EDT)...");
         } else {
-            console.log("Running Nasdaq Closing Price Capture (Tue-Sat 03:00 IST)...");
+            console.log("Running Nasdaq Closing Price Capture (Tue-Sat ~02:00 IST, dynamically adjusted for EST/EDT)...");
         }
         await captureService.captureAll('nasdaq_closing');
     }, { timezone: TZ });

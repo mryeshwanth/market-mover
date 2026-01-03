@@ -3,6 +3,7 @@ const yahooFinance = require('./yahooFinance');
 const goldScraper = require('./goldScraper');
 const dataChangeDetector = require('./dataChangeDetector');
 const moment = require('moment-timezone');
+const { getNasdaqOpeningIST, getNasdaqClosingIST } = require('../utils/nasdaqTimeConverter');
 
 const TZ = "Asia/Kolkata";
 
@@ -75,10 +76,34 @@ class CaptureService {
                 capturedAt = now.clone().hour(15).minute(40).second(0).millisecond(0);
                 break;
             case 'nasdaq_opening':
-                capturedAt = now.clone().hour(20).minute(0).second(0).millisecond(0);
+                // For Nasdaq opening, we're capturing Monday's opening
+                // Determine which Monday (ET trading day) we're capturing
+                // If it's Monday IST, use today. Otherwise, find the most recent Monday.
+                let openingDate = now.clone();
+                if (now.day() !== 1) {
+                    // Not Monday, find the most recent Monday
+                    openingDate = now.clone().day(1);
+                    if (openingDate.isAfter(now)) {
+                        openingDate.subtract(7, 'days');
+                    }
+                }
+                capturedAt = getNasdaqOpeningIST(openingDate);
                 break;
             case 'nasdaq_closing':
-                capturedAt = now.clone().hour(3).minute(0).second(0).millisecond(0);
+                // For Nasdaq closing, we're capturing the previous ET trading day's closing
+                // If cron runs Tue-Sat IST at 03:00, we're capturing the previous day's closing
+                // Determine which ET trading day's closing we're capturing
+                let closingDate = now.clone().subtract(1, 'day');
+                // If it's Saturday or Sunday IST, we're capturing Friday's closing
+                if (now.day() === 6) { // Saturday
+                    closingDate = now.clone().subtract(1, 'day'); // Friday
+                } else if (now.day() === 0) { // Sunday
+                    closingDate = now.clone().subtract(2, 'days'); // Friday
+                } else {
+                    // Tuesday-Friday: capturing previous day's closing
+                    closingDate = now.clone().subtract(1, 'day');
+                }
+                capturedAt = getNasdaqClosingIST(closingDate);
                 break;
             case 'gold_daily':
                 capturedAt = now.clone().hour(8).minute(0).second(0).millisecond(0);
