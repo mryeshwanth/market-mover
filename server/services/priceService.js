@@ -19,7 +19,7 @@ const getPriceAnalysis = async () => {
         const getNiftyOpeningPrice = async (date) => {
             const query = `
                 SELECT * FROM price_captures 
-                WHERE captured_at::date = $1 
+                WHERE (captured_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date = $1 
                 AND capture_time = 'nifty_opening'
                 AND nifty IS NOT NULL
                 ORDER BY captured_at ASC 
@@ -33,7 +33,7 @@ const getPriceAnalysis = async () => {
         const getNiftyClosingPrice = async (date) => {
             const query = `
                 SELECT * FROM price_captures 
-                WHERE captured_at::date = $1 
+                WHERE (captured_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date = $1 
                 AND capture_time = 'nifty_closing'
                 AND nifty IS NOT NULL
                 ORDER BY captured_at DESC 
@@ -57,7 +57,7 @@ const getPriceAnalysis = async () => {
                 
                 const query = `
                     SELECT * FROM price_captures 
-                    WHERE captured_at::date = $1 
+                    WHERE (captured_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date = $1 
                     AND capture_time = $2
                     AND ${assetField} IS NOT NULL
                     ORDER BY captured_at DESC 
@@ -75,7 +75,7 @@ const getPriceAnalysis = async () => {
         const getNasdaqOpeningPrice = async (date) => {
             const query = `
                 SELECT * FROM price_captures 
-                WHERE captured_at::date = $1 
+                WHERE (captured_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date = $1 
                 AND capture_time = 'nasdaq_opening'
                 AND nasdaq IS NOT NULL
                 ORDER BY captured_at ASC 
@@ -89,7 +89,7 @@ const getPriceAnalysis = async () => {
         const getNasdaqClosingPrice = async (date) => {
             const query = `
                 SELECT * FROM price_captures 
-                WHERE captured_at::date = $1 
+                WHERE (captured_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date = $1 
                 AND capture_time = 'nasdaq_closing'
                 AND nasdaq IS NOT NULL
                 ORDER BY captured_at DESC 
@@ -103,7 +103,7 @@ const getPriceAnalysis = async () => {
         const getGoldPrice = async (date) => {
             const query = `
                 SELECT * FROM price_captures 
-                WHERE captured_at::date = $1 
+                WHERE (captured_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date = $1 
                 AND capture_time = 'gold_daily'
                 AND gold_24k_per_1g IS NOT NULL
                 ORDER BY captured_at ASC 
@@ -124,7 +124,7 @@ const getPriceAnalysis = async () => {
                 
                 const query = `
                     SELECT * FROM price_captures 
-                    WHERE captured_at::date = $1 
+                    WHERE (captured_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date = $1 
                     AND capture_time = 'gold_daily'
                     AND gold_24k_per_1g IS NOT NULL
                     ORDER BY captured_at DESC 
