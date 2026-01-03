@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS price_captures (
   -- Price data
   nifty DECIMAL(10,2),
   nasdaq DECIMAL(10,2),
-  gold_24k_per_10g DECIMAL(10,2),
+  gold_24k_per_1g DECIMAL(10,2),
   
   -- Metadata
   captured_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -7,38 +7,74 @@ const TZ = "Asia/Kolkata";
 const initCronJobs = () => {
     console.log("Initializing Cron Jobs...");
 
-    // INDIAN STOCKS - Opening Price (9:20 AM IST daily)
-    cron.schedule('20 9 * * *', async () => {
-        console.log("Running Opening Price Capture...");
+    // NIFTY - Opening Price (Monday 09:20 IST only)
+    cron.schedule('20 9 * * 1', async () => {
+        console.log("Running Nifty Opening Price Capture (Monday 09:20 IST)...");
         await captureService.captureAll('nifty_opening');
     }, { timezone: TZ });
 
-    // INDIAN STOCKS - Closing Price (3:35 PM IST daily)
-    cron.schedule('35 15 * * *', async () => {
-        console.log("Running Closing Price Capture...");
+    // NIFTY - Closing Price (Monday-Friday 15:40 IST)
+    cron.schedule('40 15 * * 1-5', async () => {
+        console.log("Running Nifty Closing Price Capture (Weekdays 15:40 IST)...");
         await captureService.captureAll('nifty_closing');
     }, { timezone: TZ });
 
-    // NASDAQ - Evening Capture (8:05 PM IST daily)
-    cron.schedule('5 20 * * *', async () => {
-        console.log("Running Nasdaq Evening Capture (IST)...");
-        await captureService.captureAll('nasdaq_closing');
-    }, { timezone: TZ });
-
-    // NASDAQ - Morning Capture (2:35 AM IST daily)
-    cron.schedule('35 2 * * *', async () => {
-        console.log("Running Nasdaq Morning Capture (IST)...");
+    // NASDAQ - Opening Price (Monday 20:00 IST only)
+    cron.schedule('0 20 * * 1', async () => {
+        console.log("Running Nasdaq Opening Price Capture (Monday 20:00 IST)...");
         await captureService.captureAll('nasdaq_opening');
     }, { timezone: TZ });
 
-    // GOLD - Daily Capture (8:00 AM IST daily)
+    // NASDAQ - Closing Price (Tuesday-Saturday 03:00 IST)
+    cron.schedule('0 3 * * 2-6', async () => {
+        console.log("Running Nasdaq Closing Price Capture (Tue-Sat 03:00 IST)...");
+        await captureService.captureAll('nasdaq_closing');
+    }, { timezone: TZ });
+
+    // GOLD - Daily Capture (Every day 08:00 IST)
     cron.schedule('0 8 * * *', async () => {
-        console.log("Running Gold Daily Capture...");
+        console.log("Running Gold Daily Capture (08:00 IST)...");
         await captureService.captureAll('gold_daily');
     }, { timezone: TZ });
 
-    // Tagging Jobs (Placeholders)
-    // cron.schedule('0 22 * * *', ...); // Run daily to check for missed tags?
+    // MONTHLY CAPTURES
+    // NIFTY - Monthly Opening (1st of month 09:20 IST)
+    cron.schedule('20 9 1 * *', async () => {
+        console.log("Running Nifty Monthly Opening Capture (1st of month 09:20 IST)...");
+        await captureService.captureAll('nifty_opening');
+    }, { timezone: TZ });
+
+    // NIFTY - Monthly Closing (Check if last day of month at 15:40 IST, only on weekdays)
+    cron.schedule('40 15 * * 1-5', async () => {
+        const moment = require('moment-timezone');
+        const now = moment.tz(TZ);
+        const lastDayOfMonth = now.clone().endOf('month').date();
+        const today = now.date();
+        
+        if (today === lastDayOfMonth) {
+            console.log("Running Nifty Monthly Closing Capture (Last day of month 15:40 IST)...");
+            await captureService.captureAll('nifty_closing');
+        }
+    }, { timezone: TZ });
+
+    // NASDAQ - Monthly Opening (1st of month 20:00 IST)
+    cron.schedule('0 20 1 * *', async () => {
+        console.log("Running Nasdaq Monthly Opening Capture (1st of month 20:00 IST)...");
+        await captureService.captureAll('nasdaq_opening');
+    }, { timezone: TZ });
+
+    // NASDAQ - Monthly Closing (Check if last day of month at 03:00 IST, Tue-Sat)
+    cron.schedule('0 3 * * 2-6', async () => {
+        const moment = require('moment-timezone');
+        const now = moment.tz(TZ);
+        const lastDayOfMonth = now.clone().endOf('month').date();
+        const today = now.date();
+        
+        if (today === lastDayOfMonth) {
+            console.log("Running Nasdaq Monthly Closing Capture (Last day of month 03:00 IST)...");
+            await captureService.captureAll('nasdaq_closing');
+        }
+    }, { timezone: TZ });
 
     console.log("Cron Jobs scheduled.");
 };

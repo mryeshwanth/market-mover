@@ -13,11 +13,11 @@ async function scrapeGoldPrice() {
 
         const $ = cheerio.load(response.data);
 
-        // Selector for 24K Gold per 10g - Adjust selector based on actual site structure
+        // Selector for 24K Gold per 1g - Adjust selector based on actual site structure
         // This is a common pattern, but might need adjustment if site changes
-        // Usually in a table, looking for "24 Carat" and "10 Grams"
+        // Usually in a table, looking for "24 Carat" and "1 Gram" or "1g"
 
-        // Improved selector logic: Look for the table row containing "24 Carat gold" and "10 grams"
+        // Improved selector logic: Look for the table row containing "24 Carat gold" and "1 gram"
         // Note: This is an implementation guess and might need refinement against the live site
 
         let priceText = '';
@@ -29,11 +29,27 @@ async function scrapeGoldPrice() {
         // Finding the table that likely contains the rates
         $('.gold_silver_table').first().find('tr').each((i, row) => {
             const rowText = $(row).text().toLowerCase();
-            if (rowText.includes('24 carat') && (rowText.includes('10 gram') || rowText.includes('10g'))) {
+            // Look for 24 carat and 1 gram (or 1g)
+            if (rowText.includes('24 carat') && (rowText.includes('1 gram') || rowText.includes('1g') || rowText.includes('per gram'))) {
                 // The price is usually in the second column or last column
                 priceText = $(row).find('td').eq(1).text().trim(); // Adjust index as needed
             }
         });
+        
+        // If not found, try alternative: sometimes 10g price is shown, we need to divide by 10
+        if (!priceText) {
+            $('.gold_silver_table').first().find('tr').each((i, row) => {
+                const rowText = $(row).text().toLowerCase();
+                if (rowText.includes('24 carat') && (rowText.includes('10 gram') || rowText.includes('10g'))) {
+                    const price10g = $(row).find('td').eq(1).text().trim();
+                    const price10gNum = parseFloat(price10g.replace(/[^0-9.]/g, ''));
+                    if (!isNaN(price10gNum) && price10gNum > 0) {
+                        // Convert 10g price to 1g price
+                        priceText = (price10gNum / 10).toString();
+                    }
+                }
+            });
+        }
 
         if (!priceText) {
             // Fallback: Try a more specific selector if generic search fails
