@@ -101,13 +101,13 @@ const Dashboard = () => {
     };
 
     return (
-        <div className="dashboard-container" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto', backgroundColor: '#ffffff', minHeight: '100vh' }}>
+        <div className="dashboard-container" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto', backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
             <header style={{ marginBottom: '30px', textAlign: 'center' }}>
                 <h1 style={{ fontSize: '2em', margin: 0, color: '#000' }}>Market Mover</h1>
             </header>
 
             {/* Weekly Performance Section */}
-            <h2 style={{ fontSize: '1.2em', marginBottom: '12px', borderBottom: '1px solid #ddd', paddingBottom: '10px', textAlign: 'center', color: '#000' }}>Weekly Performance</h2>
+            <h2 style={{ fontSize: '1.2em', marginBottom: '12px', textAlign: 'center', color: '#000' }}>Weekly Performance</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '40px' }}>
                 <PriceCard
                     title="Nifty 50"
@@ -138,7 +138,7 @@ const Dashboard = () => {
             </div>
 
             {/* Monthly Performance Section */}
-            <h2 style={{ fontSize: '1.2em', marginBottom: '15px', borderBottom: '1px solid #ddd', paddingBottom: '10px', textAlign: 'center', color: '#000' }}>Monthly Performance</h2>
+            <h2 style={{ fontSize: '1.2em', marginBottom: '15px', textAlign: 'center', color: '#000' }}>Monthly Performance</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '40px' }}>
                 <PriceCard
                     title="Nifty 50"
