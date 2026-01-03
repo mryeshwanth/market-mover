@@ -31,6 +31,12 @@ h1 {
   line-height: 1.1;
 }
 
+h2 {
+  border: none;
+  border-bottom: none;
+  border-top: none;
+}
+
 .card {
   padding: 2em;
 }
