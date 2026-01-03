@@ -30,21 +30,3 @@ CREATE INDEX IF NOT EXISTS idx_captured_at ON price_captures(captured_at);
 CREATE INDEX IF NOT EXISTS idx_capture_time ON price_captures(capture_time);
 CREATE INDEX IF NOT EXISTS idx_tags ON price_captures USING GIN(tags);
 CREATE INDEX IF NOT EXISTS idx_data_changed ON price_captures(nifty_changed, nasdaq_changed, gold_changed);
-
--- Previous captures cache (for comparison)
-CREATE TABLE IF NOT EXISTS previous_captures (
-  id SERIAL PRIMARY KEY,
-  asset VARCHAR(20) UNIQUE, -- 'nifty', 'nasdaq', 'gold'
-  last_price DECIMAL(10,2),
-  last_capture_id INTEGER REFERENCES price_captures(id),
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Gold scraping log
-CREATE TABLE IF NOT EXISTS gold_scraping_log (
-  id SERIAL PRIMARY KEY,
-  attempted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  success BOOLEAN,
-  price_captured DECIMAL(10,2),
-  error_message TEXT
-);
