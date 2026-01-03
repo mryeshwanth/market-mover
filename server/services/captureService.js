@@ -2,6 +2,9 @@ const db = require('../db/database');
 const yahooFinance = require('./yahooFinance');
 const goldScraper = require('./goldScraper');
 const dataChangeDetector = require('./dataChangeDetector');
+const moment = require('moment-timezone');
+
+const TZ = "Asia/Kolkata";
 
 class CaptureService {
     async captureAll(type) {
@@ -43,19 +46,6 @@ class CaptureService {
         }
 
         // 2. Get Previous Capture for comparison
-        const previousCaptureQuery = `
-      SELECT * FROM price_captures 
-      WHERE capture_time = $1 
-      ORDER BY captured_at DESC 
-      LIMIT 1
-    `;
-        // We compare Morning vs Morning, Evening vs Evening usually to detect "Day Change"
-        // OR: do we compare vs the *immediate last* capture?
-        // The prompt says: "Compare with previous capture (Friday 3:35 PM or earlier)" for Week Start.
-        // Daily Change Detection: "did price change from previous capture?".
-        // Let's compare against the *immediate last captured row* regardless of type?
-        // "Compare with previous capture (stored in database)"
-
         const lastCaptureResult = await db.query('SELECT * FROM price_captures ORDER BY id DESC LIMIT 1');
         const previousCapture = lastCaptureResult.rows[0];
 
@@ -68,30 +58,50 @@ class CaptureService {
         // 3. Detect Changes
         const changes = dataChangeDetector.detectChanges(currentCaptureRaw, previousCapture);
 
-        // 4. Save to DB
+        // 4. Calculate the correct captured_at timestamp based on capture type and current time
+        let capturedAt;
+        const now = moment.tz(TZ);
+        
+        switch (type) {
+            case 'nifty_opening':
+                capturedAt = now.clone().hour(9).minute(20).second(0).millisecond(0);
+                break;
+            case 'nifty_closing':
+                capturedAt = now.clone().hour(15).minute(40).second(0).millisecond(0);
+                break;
+            case 'nasdaq_opening':
+                capturedAt = now.clone().hour(20).minute(0).second(0).millisecond(0);
+                break;
+            case 'nasdaq_closing':
+                capturedAt = now.clone().hour(3).minute(0).second(0).millisecond(0);
+                break;
+            case 'gold_daily':
+                capturedAt = now.clone().hour(8).minute(0).second(0).millisecond(0);
+                break;
+            default:
+                capturedAt = now;
+        }
+
+        // 5. Save to DB with explicit timestamp
         const insertQuery = `
-      INSERT INTO price_captures 
-      (nifty, nasdaq, gold_24k_per_1g, capture_time, nifty_changed, nasdaq_changed, gold_changed, is_auto_captured)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, true)
-      RETURNING id
-    `;
+            INSERT INTO price_captures 
+            (nifty, nasdaq, gold_24k_per_1g, capture_time, captured_at, nifty_changed, nasdaq_changed, gold_changed, is_auto_captured)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
+            RETURNING id
+        `;
 
         const result = await db.query(insertQuery, [
             niftyPrice,
             nasdaqPrice,
             goldPrice,
             type,
+            capturedAt.toISOString(),
             changes.nifty_changed,
             changes.nasdaq_changed,
             changes.gold_changed
         ]);
 
         const newId = result.rows[0].id;
-
-        // 5. Update Previous Captures Cache (Optional, derived from main table usually, but good for fast lookups)
-        // We can skip this if we just query the main table. The prompt suggested a 'previous_captures' table.
-        // Let's implement it to be safe.
-        // ... (To be implemented if strictly needed, but main logic uses price_captures)
 
         return {
             id: newId,
