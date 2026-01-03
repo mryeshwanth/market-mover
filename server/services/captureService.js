@@ -45,8 +45,13 @@ class CaptureService {
             }
         }
 
-        // 2. Get Previous Capture for comparison
-        const lastCaptureResult = await db.query('SELECT * FROM price_captures ORDER BY id DESC LIMIT 1');
+        // 2. Get Previous Capture of the same type for comparison
+        const lastCaptureResult = await db.query(`
+            SELECT * FROM price_captures 
+            WHERE capture_time = $1 
+            ORDER BY captured_at DESC 
+            LIMIT 1
+        `, [type]);
         const previousCapture = lastCaptureResult.rows[0];
 
         const currentCaptureRaw = {
