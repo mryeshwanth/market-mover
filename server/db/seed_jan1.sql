@@ -1,2 +1,0 @@
--- DEPRECATED: This file is no longer used. Use insertProvidedData.js instead.
--- Kept for reference only. Contains old column names and capture types.

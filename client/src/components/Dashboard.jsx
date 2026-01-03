@@ -107,7 +107,7 @@ const Dashboard = () => {
             </header>
 
             {/* Weekly Performance Section */}
-            <h2 style={{ fontSize: '1.2em', marginBottom: '12px', textAlign: 'center', color: '#000' }}>Weekly Performance</h2>
+            <h2 style={{ fontSize: '1.2em', marginBottom: '12px', textAlign: 'center', color: '#000', border: 'none', borderBottom: 'none' }}>Weekly Performance</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '40px' }}>
                 <PriceCard
                     title="Nifty 50"
@@ -138,7 +138,7 @@ const Dashboard = () => {
             </div>
 
             {/* Monthly Performance Section */}
-            <h2 style={{ fontSize: '1.2em', marginBottom: '15px', textAlign: 'center', color: '#000' }}>Monthly Performance</h2>
+            <h2 style={{ fontSize: '1.2em', marginBottom: '15px', textAlign: 'center', color: '#000', border: 'none', borderBottom: 'none' }}>Monthly Performance</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '40px' }}>
                 <PriceCard
                     title="Nifty 50"
