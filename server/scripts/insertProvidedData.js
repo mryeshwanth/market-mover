@@ -61,11 +61,7 @@ async function insertData() {
     );
     console.log('✓ Nifty Closing: 1 Jan 2026 - ₹26,146.55');
     
-    // 2 Jan 2026 - Opening (Tuesday 09:20 IST) - Note: This is Tuesday, but we'll insert as per data
-    // Actually, wait - 2 Jan 2026 is a Friday (let me check). Actually, 1 Jan 2026 is Wednesday, so 2 Jan is Thursday
-    // But the user said opening, so maybe they want it. Let me check the day.
-    // Actually, the user provided opening for 2 Jan, but our schedule says only Monday opening.
-    // I'll insert it anyway since user provided it.
+    // 2 Jan 2026 - Opening (Thursday 09:20 IST)
     await insertCapture(
         26155.10, null, null, 
         'nifty_opening', 
@@ -82,7 +78,21 @@ async function insertData() {
     console.log('✓ Nifty Closing: 2 Jan 2026 - ₹26,328.55');
     
     // Nasdaq Data
-    // 1 Jan 2026 - Holiday (no data)
+    // 1 Jan 2026 - Opening (Wednesday 20:00 IST / 8:00 PM) - Monthly opening
+    await insertCapture(
+        null, 25248.77, null, 
+        'nasdaq_opening', 
+        moment.tz('2026-01-01 20:00', 'YYYY-MM-DD HH:mm', TZ).toISOString()
+    );
+    console.log('✓ Nasdaq Opening: 1 Jan 2026 - $25,248.77');
+    
+    // 1 Jan 2026 - Closing (Thursday 03:00 IST) - Monthly closing
+    await insertCapture(
+        null, 25248.77, null, 
+        'nasdaq_closing', 
+        moment.tz('2026-01-02 03:00', 'YYYY-MM-DD HH:mm', TZ).toISOString()
+    );
+    console.log('✓ Nasdaq Closing: 1 Jan 2026 (03:00 IST on 2nd) - $25,248.77');
     
     // 2 Jan 2026 - Opening (Thursday 20:00 IST / 8:00 PM)
     await insertCapture(
@@ -102,7 +112,7 @@ async function insertData() {
     );
     console.log('✓ Nasdaq Closing: 2 Jan 2026 (03:00 IST) - $25,206.17');
     
-    // Gold Data (per 10g - assuming user's values are per 10g)
+    // Gold Data (per 1g)
     // 1 Jan 2026 - 08:00 IST
     await insertCapture(
         null, null, 13584.00, 

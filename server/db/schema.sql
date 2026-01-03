@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS price_captures (
   
   -- Metadata
   captured_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  capture_time VARCHAR(20), -- 'morning' (9:20/8:05), 'evening' (3:35/2:35), 'gold_daily' (12:00)
+  capture_time VARCHAR(20), -- 'nifty_opening', 'nifty_closing', 'nasdaq_opening', 'nasdaq_closing', 'gold_daily'
   
   -- Data change detection
   nifty_changed BOOLEAN DEFAULT false,
