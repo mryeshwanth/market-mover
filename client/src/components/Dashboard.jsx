@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { fetchLivePrices } from '../services/api';
 
-const PriceCard = ({ title, openingPrice, closingPrice, performance, currency = '₹', startDate, endDate }) => {
+const PriceCard = ({ title, openingPrice, closingPrice, performance, currency = '₹', startDate, endDate, isGold = false }) => {
     const isPositive = performance.change >= 0;
     const isNeutral = performance.change === 0;
     const color = isNeutral ? '#888' : (isPositive ? '#4caf50' : '#f44336');
@@ -22,14 +22,18 @@ const PriceCard = ({ title, openingPrice, closingPrice, performance, currency = 
         return date.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
     };
 
+    // For Gold, use different labels
+    const leftLabel = isGold ? 'START' : 'OPENING';
+    const rightLabel = isGold ? 'END' : 'CLOSING';
+
     return (
         <div className="card" style={{ background: '#ffffff', color: '#000000', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
             <h3 style={{ margin: '0 0 20px 0', color: '#666', fontSize: '0.9em', textTransform: 'uppercase', letterSpacing: '1px', textAlign: 'center' }}>{title}</h3>
 
             {/* Row 1: Opening and Closing Labels */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: '0.85em', color: '#888', fontWeight: '600' }}>OPENING</span>
-                <span style={{ fontSize: '0.85em', color: '#888', fontWeight: '600' }}>CLOSING</span>
+                <span style={{ fontSize: '0.85em', color: '#888', fontWeight: '600' }}>{leftLabel}</span>
+                <span style={{ fontSize: '0.85em', color: '#888', fontWeight: '600' }}>{rightLabel}</span>
             </div>
 
             {/* Row 2: Opening and Closing Prices */}
@@ -129,6 +133,7 @@ const Dashboard = () => {
                     performance={weekly.gold}
                     startDate={weekly.gold.startDate}
                     endDate={weekly.gold.endDate}
+                    isGold={true}
                 />
             </div>
 
@@ -159,6 +164,7 @@ const Dashboard = () => {
                     performance={monthly.gold}
                     startDate={monthly.gold.startDate}
                     endDate={monthly.gold.endDate}
+                    isGold={true}
                 />
             </div>
 

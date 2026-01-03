@@ -7,50 +7,39 @@ class CaptureService {
     async captureAll(type) {
         console.log(`Starting capture for type: ${type}`);
 
-        // 1. Fetch generic market data (Prices)
+        // 1. Fetch data based on capture type
         let niftyPrice = null;
         let nasdaqPrice = null;
         let goldPrice = null;
 
-        // Fetch Stock Data
-        try {
-            // We only fetch based on the type if needed, but for simplicity we might fetch what's available
-            // Optimally:
-            // Morning (IST): Nifty Open, Nasdaq Closed (Prev Close)
-            // Evening (IST): Nifty Closed, Nasdaq Open
-
-            // However, the requirement says "Capture prices... daily".
-            // Let's rely on the cron schedule to call this at the right time.
-            // We will fetch whatever is the current live/last price.
-
-            const stockPrices = await yahooFinance.getMarketPrices();
-            niftyPrice = stockPrices.nifty;
-            nasdaqPrice = stockPrices.nasdaq;
-        } catch (e) {
-            console.error("Failed to fetch stock prices", e);
+        // Fetch Nifty data only for Nifty captures
+        if (type === 'nifty_opening' || type === 'nifty_closing') {
+            try {
+                const niftyData = await yahooFinance.fetchPrice(yahooFinance.SYMBOLS.NIFTY);
+                niftyPrice = niftyData.price;
+            } catch (e) {
+                console.error("Failed to fetch Nifty price", e);
+            }
         }
 
-        // Fetch Gold Data (usually once a day, but safe to check)
-        // Gold is typically captured at 12:00 PM
+        // Fetch Nasdaq data only for Nasdaq captures
+        if (type === 'nasdaq_opening' || type === 'nasdaq_closing') {
+            try {
+                const nasdaqData = await yahooFinance.fetchPrice(yahooFinance.SYMBOLS.NASDAQ);
+                nasdaqPrice = nasdaqData.price;
+            } catch (e) {
+                console.error("Failed to fetch Nasdaq price", e);
+            }
+        }
+
+        // Fetch Gold Data only for Gold captures
         if (type === 'gold_daily') {
             try {
                 const goldData = await goldScraper.scrapeGoldPrice();
                 goldPrice = goldData.price;
             } catch (e) {
                 console.error("Failed to fetch gold price", e);
-                // Fallback: Get last known price from DB?
-                // For now, leave null.
             }
-        } else {
-            // If not a specific gold capture, we might want to carry forward the last known gold price 
-            // OR just leave it null if we are strictly capturing point-in-time snapshots.
-            // Project says "Capture prices at specified times...".
-            // Let's assume we fetch fresh if we can, or null. 
-            // Actually, for Nifty/Nasdaq captures, we probably don't need to re-scrape gold every time if it's expensive/rate-limited.
-            // Let's leave Gold as null for non-gold captures unless we want to persist the last known value.
-            // Better: Fetch last known gold price from DB to fill these rows? 
-            // OR: Just store NULL and handle it in the UI/Analysis.
-            // Let's store NULL for now to be cleaner about what was actually captured.
         }
 
         // 2. Get Previous Capture for comparison
@@ -82,7 +71,7 @@ class CaptureService {
         // 4. Save to DB
         const insertQuery = `
       INSERT INTO price_captures 
-      (nifty, nasdaq, gold_24k_per_10g, capture_time, nifty_changed, nasdaq_changed, gold_changed, is_auto_captured)
+      (nifty, nasdaq, gold_24k_per_1g, capture_time, nifty_changed, nasdaq_changed, gold_changed, is_auto_captured)
       VALUES ($1, $2, $3, $4, $5, $6, $7, true)
       RETURNING id
     `;
