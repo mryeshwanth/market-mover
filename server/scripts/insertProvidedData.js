@@ -15,6 +15,11 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
+// Set timezone to IST for all connections
+pool.on('connect', async (client) => {
+    await client.query("SET timezone = 'Asia/Kolkata'");
+});
+
 async function clearDatabase() {
     try {
         console.log('Clearing existing data...');
@@ -60,10 +65,8 @@ async function insertCapture(nifty, nasdaq, gold, captureTime, capturedAt) {
             goldChanged = !!gold;
         }
         
-        // Format timestamp properly for PostgreSQL (with timezone)
-        // capturedAt can be:
-        // - A string like '2026-01-01 09:20' for Nifty/Gold
-        // - A moment object for Nasdaq (already converted from ET to IST)
+        // Format timestamp properly for PostgreSQL
+        // Use ISO string format which includes timezone, PostgreSQL will convert to UTC for storage
         let timestampMoment;
         if (typeof capturedAt === 'string') {
             timestampMoment = moment.tz(capturedAt, 'YYYY-MM-DD HH:mm', TZ);
@@ -71,7 +74,8 @@ async function insertCapture(nifty, nasdaq, gold, captureTime, capturedAt) {
             // It's already a moment object (for Nasdaq)
             timestampMoment = capturedAt;
         }
-        const pgTimestamp = timestampMoment.format('YYYY-MM-DD HH:mm:ss') + '+05:30'; // IST offset
+        // Use toISOString() which includes timezone info, PostgreSQL will store as UTC but preserve the original time
+        const pgTimestamp = timestampMoment.toISOString();
         
         const query = `
             INSERT INTO price_captures 

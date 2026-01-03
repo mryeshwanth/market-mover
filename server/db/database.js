@@ -6,6 +6,11 @@ const pool = new Pool({
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
+// Set timezone to IST for all connections
+pool.on('connect', async (client) => {
+    await client.query("SET timezone = 'Asia/Kolkata'");
+});
+
 module.exports = {
     query: (text, params) => pool.query(text, params),
     pool
