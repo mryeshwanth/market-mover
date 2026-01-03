@@ -4,6 +4,7 @@
 
 const { Pool } = require('pg');
 const moment = require('moment-timezone');
+const { getNasdaqOpeningIST, getNasdaqClosingIST } = require('../utils/nasdaqTimeConverter');
 require('dotenv').config();
 
 const TZ = "Asia/Kolkata";
@@ -60,8 +61,16 @@ async function insertCapture(nifty, nasdaq, gold, captureTime, capturedAt) {
         }
         
         // Format timestamp properly for PostgreSQL (with timezone)
-        // capturedAt is a string like '2026-01-01 09:20'
-        const timestampMoment = moment.tz(capturedAt, 'YYYY-MM-DD HH:mm', TZ);
+        // capturedAt can be:
+        // - A string like '2026-01-01 09:20' for Nifty/Gold
+        // - A moment object for Nasdaq (already converted from ET to IST)
+        let timestampMoment;
+        if (typeof capturedAt === 'string') {
+            timestampMoment = moment.tz(capturedAt, 'YYYY-MM-DD HH:mm', TZ);
+        } else {
+            // It's already a moment object (for Nasdaq)
+            timestampMoment = capturedAt;
+        }
         const pgTimestamp = timestampMoment.format('YYYY-MM-DD HH:mm:ss') + '+05:30'; // IST offset
         
         const query = `
@@ -117,37 +126,42 @@ async function insertData() {
     console.log('✓ Nifty Closing: 2 Jan 2026 - ₹26,328.55');
     
     // Nasdaq Data
-    // 1 Jan 2026 - Opening (Wednesday 20:00 IST / 8:00 PM) - Monthly opening
+    // Note: Using dynamic ET to IST conversion
+    // 1 Jan 2026 - Opening (ET trading day: Jan 1, 2026)
+    const nasdaqOpening1 = getNasdaqOpeningIST(moment.tz('2026-01-01', 'YYYY-MM-DD', TZ));
     await insertCapture(
         null, 25248.77, null, 
         'nasdaq_opening', 
-        '2026-01-01 20:00'
+        nasdaqOpening1
     );
-    console.log('✓ Nasdaq Opening: 1 Jan 2026 - $25,248.77');
+    console.log(`✓ Nasdaq Opening: 1 Jan 2026 - $25,248.77 (${nasdaqOpening1.format('YYYY-MM-DD HH:mm')} IST)`);
     
-    // 1 Jan 2026 - Closing (Thursday 03:00 IST) - Monthly closing
+    // 1 Jan 2026 - Closing (ET trading day: Jan 1, 2026, closes at 4 PM ET = next day in IST)
+    const nasdaqClosing1 = getNasdaqClosingIST(moment.tz('2026-01-01', 'YYYY-MM-DD', TZ));
     await insertCapture(
         null, 25248.77, null, 
         'nasdaq_closing', 
-        '2026-01-02 03:00'
+        nasdaqClosing1
     );
-    console.log('✓ Nasdaq Closing: 1 Jan 2026 (03:00 IST on 2nd) - $25,248.77');
+    console.log(`✓ Nasdaq Closing: 1 Jan 2026 - $25,248.77 (${nasdaqClosing1.format('YYYY-MM-DD HH:mm')} IST)`);
     
-    // 2 Jan 2026 - Opening (Thursday 20:00 IST / 8:00 PM)
+    // 2 Jan 2026 - Opening (ET trading day: Jan 2, 2026)
+    const nasdaqOpening2 = getNasdaqOpeningIST(moment.tz('2026-01-02', 'YYYY-MM-DD', TZ));
     await insertCapture(
         null, 25524.27, null, 
         'nasdaq_opening', 
-        '2026-01-02 20:00'
+        nasdaqOpening2
     );
-    console.log('✓ Nasdaq Opening: 2 Jan 2026 - $25,524.27');
+    console.log(`✓ Nasdaq Opening: 2 Jan 2026 - $25,524.27 (${nasdaqOpening2.format('YYYY-MM-DD HH:mm')} IST)`);
     
-    // 2 Jan 2026 - Closing (Friday 03:00 IST - captures Thursday's close)
+    // 2 Jan 2026 - Closing (ET trading day: Jan 2, 2026, closes at 4 PM ET = next day in IST)
+    const nasdaqClosing2 = getNasdaqClosingIST(moment.tz('2026-01-02', 'YYYY-MM-DD', TZ));
     await insertCapture(
         null, 25206.17, null, 
         'nasdaq_closing', 
-        '2026-01-03 03:00'
+        nasdaqClosing2
     );
-    console.log('✓ Nasdaq Closing: 2 Jan 2026 (03:00 IST on 3rd) - $25,206.17');
+    console.log(`✓ Nasdaq Closing: 2 Jan 2026 - $25,206.17 (${nasdaqClosing2.format('YYYY-MM-DD HH:mm')} IST)`);
     
     // Gold Data (per 1g)
     // 1 Jan 2026 - 08:00 IST
