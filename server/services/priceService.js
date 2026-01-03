@@ -142,7 +142,16 @@ const getPriceAnalysis = async () => {
         const weekMonday = now.clone().startOf('isoWeek'); // Monday of current week
         
         // Nifty Weekly: Monday opening → Current day closing (or last available weekday closing)
-        const weekMondayNiftyOpen = await getNiftyOpeningPrice(weekMonday);
+        // If Monday opening doesn't exist, find first available weekday opening
+        let weekMondayNiftyOpen = await getNiftyOpeningPrice(weekMonday);
+        if (!weekMondayNiftyOpen) {
+            // Find first available weekday opening in the week
+            for (let i = 0; i <= 4; i++) {
+                const checkDate = weekMonday.clone().add(i, 'days');
+                weekMondayNiftyOpen = await getNiftyOpeningPrice(checkDate);
+                if (weekMondayNiftyOpen) break;
+            }
+        }
         let weekNiftyClose = null;
         const currentDay = now.day(); // 0=Sunday, 1=Monday, ..., 6=Saturday
         
@@ -159,7 +168,16 @@ const getPriceAnalysis = async () => {
         }
 
         // Nasdaq Weekly: Monday opening → Current day closing (or last available weekday closing)
-        const weekMondayNasdaqOpen = await getNasdaqOpeningPrice(weekMonday);
+        // If Monday opening doesn't exist, find first available weekday opening
+        let weekMondayNasdaqOpen = await getNasdaqOpeningPrice(weekMonday);
+        if (!weekMondayNasdaqOpen) {
+            // Find first available weekday opening in the week
+            for (let i = 0; i <= 4; i++) {
+                const checkDate = weekMonday.clone().add(i, 'days');
+                weekMondayNasdaqOpen = await getNasdaqOpeningPrice(checkDate);
+                if (weekMondayNasdaqOpen) break;
+            }
+        }
         let weekNasdaqClose = null;
         
         if (currentDay >= 1 && currentDay <= 5) {
