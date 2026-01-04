@@ -1,78 +1,181 @@
-const axios = require('axios');
+const puppeteer = require('puppeteer');
 
-const GOLD_API_URL = process.env.GOLD_API_URL || 'https://api.indiagoldratesapi.com/rates';
-const GOLD_API_KEY = process.env.GOLD_API_KEY || '';
-
-async function scrapeGoldPrice() {
-    try {
-        const headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept': 'application/json'
-        };
-
-        // Add Authorization header if API key is provided
-        if (GOLD_API_KEY) {
-            headers['Authorization'] = `Bearer ${GOLD_API_KEY}`;
+// Multiple sources to try for gold prices
+const GOLD_SOURCES = [
+    {
+        name: 'goodreturns.in',
+        url: 'https://www.goodreturns.in/gold-rates/',
+        selector: '.gold_silver_table tr:nth-child(2) td:nth-child(2), .gold-rate-24k, [data-gold-rate]',
+        extractPrice: (text) => {
+            // Extract price from text like "₹13,584" or "13584"
+            const match = text.replace(/[₹,\s]/g, '').match(/(\d+)/);
+            const price = match ? parseFloat(match[1]) : null;
+            // If price is > 10000, it's likely per 10g, so divide by 10
+            return price && price > 10000 ? price / 10 : price;
         }
+    },
+    {
+        name: 'goldprice.org',
+        url: 'https://www.goldprice.org/gold-price-india.html',
+        selector: '.current-price, .gold-price, [class*="price"]',
+        extractPrice: (text) => {
+            // Extract price per gram (usually shown as per 10g, so divide by 10)
+            const match = text.replace(/[₹,\s]/g, '').match(/(\d+)/);
+            const price = match ? parseFloat(match[1]) : null;
+            // If price is > 10000, it's likely per 10g, so divide by 10
+            return price && price > 10000 ? price / 10 : price;
+        }
+    },
+    {
+        name: 'monex.com',
+        url: 'https://www.monex.com/gold-prices/',
+        selector: '.gold-price-india, .price, [data-price]',
+        extractPrice: (text) => {
+            const match = text.replace(/[₹,\s]/g, '').match(/(\d+)/);
+            const price = match ? parseFloat(match[1]) : null;
+            return price && price > 10000 ? price / 10 : price;
+        }
+    }
+];
 
-        const response = await axios.get(GOLD_API_URL, {
-            headers: headers,
-            timeout: 10000 // 10 second timeout
+async function scrapeGoldPriceFromSource(source) {
+    let browser = null;
+    try {
+        console.log(`Attempting to scrape gold price from ${source.name}...`);
+        
+        browser = await puppeteer.launch({
+            headless: true,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--disable-gpu'
+            ]
         });
 
-        if (response.status !== 200) {
-            throw new Error(`API returned status ${response.status}`);
+        const page = await browser.newPage();
+        
+        // Set a realistic user agent
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+        
+        // Set viewport
+        await page.setViewport({ width: 1920, height: 1080 });
+
+        // Navigate to the page with timeout
+        await page.goto(source.url, {
+            waitUntil: 'networkidle2',
+            timeout: 30000
+        });
+
+        // Wait a bit for dynamic content to load
+        await page.waitForTimeout(2000);
+
+        // Try to find the price element
+        try {
+            await page.waitForSelector(source.selector, { timeout: 10000 });
+        } catch (e) {
+            // If selector not found, try to find any element containing gold price
+            console.log(`Selector ${source.selector} not found, trying alternative approach...`);
         }
 
-        const data = response.data;
-
-        // API typically returns gold_999 (24K) per 10g, so we need to divide by 10 for 1g
-        // Handle different possible response formats
-        let pricePer10g = null;
-
-        if (data.gold_999) {
-            pricePer10g = parseFloat(data.gold_999);
-        } else if (data.gold_24k) {
-            pricePer10g = parseFloat(data.gold_24k);
-        } else if (data.rate) {
-            pricePer10g = parseFloat(data.rate);
-        } else if (data.price) {
-            pricePer10g = parseFloat(data.price);
-        } else if (typeof data === 'number') {
-            pricePer10g = parseFloat(data);
-        } else {
-            // Try to find any numeric value that looks like a gold price (typically 60000-80000 for 10g)
-            const values = Object.values(data).filter(v => typeof v === 'number' && v > 10000 && v < 200000);
-            if (values.length > 0) {
-                pricePer10g = values[0];
+        // Extract price text - try multiple selectors
+        const selectors = source.selector.split(', ').map(s => s.trim());
+        let priceText = null;
+        
+        for (const sel of selectors) {
+            try {
+                priceText = await page.evaluate((selector) => {
+                    const element = document.querySelector(selector);
+                    if (element) {
+                        return element.textContent || element.innerText;
+                    }
+                    return null;
+                }, sel);
+                if (priceText) break;
+            } catch (e) {
+                continue;
             }
         }
 
-        if (!pricePer10g || isNaN(pricePer10g) || pricePer10g <= 0) {
-            throw new Error(`Failed to extract gold price from API response: ${JSON.stringify(data)}`);
+        // If no selector worked, try to find price in page text
+        if (!priceText) {
+            priceText = await page.evaluate(() => {
+                // Try to find any element with "24k" or "gold" and a price
+                const allText = document.body.innerText;
+                // Look for patterns like "₹13,584" or "13584" near "24k" or "gold"
+                const priceMatch = allText.match(/(?:24[Kk]|gold).*?₹?\s*(\d{1,2}[,\d]{3,})/i) ||
+                                 allText.match(/₹?\s*(\d{1,2}[,\d]{3,}).*?(?:24[Kk]|gold)/i);
+                if (priceMatch) {
+                    return priceMatch[1];
+                }
+                // Try to find any number between 5000-10000 (reasonable per gram price)
+                const numbers = allText.match(/\b(\d{4,5})\b/g);
+                if (numbers) {
+                    const validPrice = numbers.find(n => {
+                        const num = parseInt(n.replace(/,/g, ''));
+                        return num >= 5000 && num <= 10000;
+                    });
+                    if (validPrice) return validPrice;
+                }
+                return null;
+            });
         }
 
-        // Convert from per 10g to per 1g (24K)
-        const pricePer1g = pricePer10g / 10;
-
-        if (pricePer1g <= 0 || isNaN(pricePer1g)) {
-            throw new Error(`Invalid price calculated: ${pricePer1g} from ${pricePer10g}`);
+        if (!priceText) {
+            throw new Error(`Could not find price element on ${source.name}`);
         }
+
+        // Extract price using the source's extractPrice function
+        const pricePer1g = source.extractPrice(priceText);
+
+        if (!pricePer1g || isNaN(pricePer1g) || pricePer1g <= 0) {
+            throw new Error(`Invalid price extracted from ${source.name}: ${priceText}`);
+        }
+
+        // Validate price is reasonable (24K gold in India is typically 5000-8000 per gram)
+        if (pricePer1g < 5000 || pricePer1g > 10000) {
+            throw new Error(`Price out of reasonable range: ${pricePer1g} (expected 5000-10000)`);
+        }
+
+        console.log(`✓ Successfully scraped gold price from ${source.name}: ₹${pricePer1g.toFixed(2)} per gram`);
+        
+        await browser.close();
+        browser = null;
 
         return {
             price: pricePer1g,
             currency: 'INR',
-            timestamp: new Date()
+            timestamp: new Date(),
+            source: source.name
         };
 
     } catch (error) {
-        console.error('Error fetching gold price from API:', error.message);
-        if (error.response) {
-            console.error('API Response Status:', error.response.status);
-            console.error('API Response Data:', error.response.data);
+        if (browser) {
+            await browser.close();
         }
+        console.error(`✗ Failed to scrape from ${source.name}:`, error.message);
         throw error;
     }
+}
+
+async function scrapeGoldPrice() {
+    const errors = [];
+    
+    // Try each source in order
+    for (const source of GOLD_SOURCES) {
+        try {
+            const result = await scrapeGoldPriceFromSource(source);
+            return result;
+        } catch (error) {
+            errors.push(`${source.name}: ${error.message}`);
+            // Continue to next source
+            continue;
+        }
+    }
+
+    // If all sources failed, throw error with all error messages
+    throw new Error(`All gold price sources failed:\n${errors.join('\n')}`);
 }
 
 module.exports = {
