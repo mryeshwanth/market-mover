@@ -136,12 +136,6 @@ const initCronJobs = () => {
     }
     console.log(`✓ Gold Daily:        Every day at 08:00 IST (Next: ${nextGoldDaily.format('YYYY-MM-DD HH:mm')} IST)`);
     
-    const nextGoldTest = now.clone().hour(15).minute(20).second(0);
-    if (nextGoldTest.isBefore(now)) {
-        nextGoldTest.add(1, 'day');
-    }
-    console.log(`✓ Gold Test:         Every day at 15:20 IST (Next: ${nextGoldTest.format('YYYY-MM-DD HH:mm')} IST)`);
-    
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
     // NIFTY - Daily Opening (Every weekday 09:20 IST)
@@ -185,33 +179,6 @@ const initCronJobs = () => {
             console.log("✓ Nasdaq Daily Closing Capture completed successfully");
         } catch (error) {
             console.error("✗ Nasdaq Daily Closing Capture failed:", error.message);
-        }
-    }, { timezone: TZ });
-
-    // GOLD - Test Capture (15:20 IST - temporary for testing today)
-    cron.schedule('20 15 * * *', async () => {
-        console.log("\n=== Running Gold Test Capture (15:20 IST) ===");
-        const today = moment.tz(TZ).format('YYYY-MM-DD');
-        
-        // Check if already captured today
-        const alreadyCaptured = await isGoldCapturedToday();
-        if (alreadyCaptured) {
-            console.log(`✓ Gold already captured for ${today}. Skipping.`);
-            return;
-        }
-
-        try {
-            const result = await captureService.captureAll('gold_daily');
-            console.log(`\n✓✓✓ GOLD CAPTURED SUCCESSFULLY ✓✓✓`);
-            console.log(`   Date: ${today}`);
-            console.log(`   Price: ₹${result.gold.toFixed(2)} per gram (24K)`);
-            console.log(`   Source: ${result.source || 'N/A'}`);
-            console.log(`✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓\n`);
-        } catch (error) {
-            console.error("✗ Gold Test Capture failed:", error.message);
-            console.log("   Starting retry mechanism with 10-minute intervals...");
-            // Start retry mechanism
-            retryGoldCapture(1, 10);
         }
     }, { timezone: TZ });
 

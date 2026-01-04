@@ -186,43 +186,56 @@ const Dashboard = () => {
                     box-sizing: border-box;
                 }
                 @media (max-width: 768px) {
-                    .dashboard-container {
-                        padding: 15px !important;
+                    body, html {
+                        margin: 0 !important;
+                        padding: 0 !important;
                         width: 100% !important;
-                        margin: 0 auto !important;
+                        overflow-x: hidden !important;
+                    }
+                    .dashboard-container {
+                        padding: 12px !important;
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        margin: 0 !important;
+                        box-sizing: border-box !important;
                     }
                     header {
                         text-align: center !important;
                         width: 100% !important;
-                        margin: 0 auto 30px auto !important;
+                        margin: 0 auto 20px auto !important;
+                        padding: 0 !important;
                     }
                     header h1 {
                         text-align: center !important;
                         margin: 0 auto !important;
+                        padding: 0 !important;
                     }
                     .section-title {
                         font-size: 1em !important;
-                        margin-bottom: 15px !important;
+                        margin-bottom: 12px !important;
                         text-align: left !important;
                         width: 100% !important;
+                        padding: 0 !important;
                     }
                     .cards-grid {
                         display: grid !important;
                         grid-template-columns: 1fr !important;
-                        gap: 15px !important;
-                        margin-bottom: 30px !important;
+                        gap: 12px !important;
+                        margin-bottom: 25px !important;
                         width: 100% !important;
                         max-width: 100% !important;
                         padding: 0 !important;
                         margin-left: 0 !important;
                         margin-right: 0 !important;
+                        box-sizing: border-box !important;
                     }
                     .card {
-                        padding: 16px !important;
+                        padding: 14px !important;
                         width: 100% !important;
                         max-width: 100% !important;
                         margin: 0 !important;
                         box-sizing: border-box !important;
+                        min-width: 0 !important;
                     }
                     .card h3 {
                         font-size: 0.75em !important;
