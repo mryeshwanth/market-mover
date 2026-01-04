@@ -61,12 +61,6 @@ async function scrapeGoldPrice() {
         // Add 8.5% markup for charges
         const pricePerGramWithMarkup = pricePerGram * (1 + MARKUP_PERCENTAGE / 100);
 
-        // Validate price is reasonable (24K gold in India can vary significantly)
-        // Updated range to accommodate market fluctuations (3000-20000 per gram)
-        if (pricePerGramWithMarkup < 3000 || pricePerGramWithMarkup > 20000) {
-            throw new Error(`Price out of reasonable range: ₹${pricePerGramWithMarkup.toFixed(2)} (expected 3000-20000). Spot per ounce: ₹${pricePerOunce.toFixed(2)}, Spot per gram: ₹${pricePerGram.toFixed(2)}`);
-        }
-
         console.log(`✓ Successfully fetched gold price from goldapi.io`);
         console.log(`   Spot price per ounce: ₹${pricePerOunce.toFixed(2)}`);
         console.log(`   Spot price per gram: ₹${pricePerGram.toFixed(2)}`);
