@@ -1,4 +1,6 @@
 const puppeteer = require('puppeteer');
+const fs = require('fs');
+const path = require('path');
 
 // Multiple sources to try for gold prices
 const GOLD_SOURCES = [
@@ -43,16 +45,74 @@ async function scrapeGoldPriceFromSource(source) {
     try {
         console.log(`Attempting to scrape gold price from ${source.name}...`);
         
-        browser = await puppeteer.launch({
+        // Configure Puppeteer for production environments
+        const launchOptions = {
             headless: true,
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
                 '--disable-accelerated-2d-canvas',
-                '--disable-gpu'
+                '--disable-gpu',
+                '--disable-software-rasterizer',
+                '--disable-extensions',
+                '--disable-background-networking',
+                '--disable-background-timer-throttling',
+                '--disable-backgrounding-occluded-windows',
+                '--disable-breakpad',
+                '--disable-client-side-phishing-detection',
+                '--disable-default-apps',
+                '--disable-features=TranslateUI',
+                '--disable-hang-monitor',
+                '--disable-ipc-flooding-protection',
+                '--disable-popup-blocking',
+                '--disable-prompt-on-repost',
+                '--disable-renderer-backgrounding',
+                '--disable-sync',
+                '--metrics-recording-only',
+                '--mute-audio',
+                '--no-first-run',
+                '--safebrowsing-disable-auto-update',
+                '--enable-automation',
+                '--password-store=basic',
+                '--use-mock-keychain'
             ]
-        });
+        };
+
+        // For production environments, try to find Chrome/Chromium in common locations
+        const possibleChromePaths = [
+            process.env.CHROME_PATH,
+            process.env.PUPPETEER_EXECUTABLE_PATH,
+            '/usr/bin/chromium',
+            '/usr/bin/chromium-browser',
+            '/usr/bin/google-chrome',
+            '/usr/bin/google-chrome-stable',
+            '/snap/bin/chromium',
+            '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+            process.platform === 'win32' ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' : null,
+            process.platform === 'win32' ? 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe' : null
+        ].filter(Boolean);
+
+        // Try to find an existing Chrome/Chromium executable
+        for (const chromePath of possibleChromePaths) {
+            try {
+                if (fs.existsSync(chromePath)) {
+                    launchOptions.executablePath = chromePath;
+                    console.log(`Using Chrome at: ${chromePath}`);
+                    break;
+                }
+            } catch (e) {
+                // Continue to next path
+            }
+        }
+
+        // If no Chrome found and we're in production, try to use puppeteer's default
+        // but with better error handling
+        if (!launchOptions.executablePath && process.env.NODE_ENV === 'production') {
+            console.log('No system Chrome found, using Puppeteer default (will download if needed)');
+        }
+
+        browser = await puppeteer.launch(launchOptions);
 
         const page = await browser.newPage();
         
