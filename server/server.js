@@ -6,13 +6,21 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const path = require('path');
+const fs = require('fs');
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Serve static files from React app
-app.use(express.static(path.join(__dirname, '../client/dist')));
+// Serve static files from React app (only if dist directory exists)
+const distPath = path.join(__dirname, '../client/dist');
+if (fs.existsSync(distPath)) {
+    app.use(express.static(distPath));
+    console.log('Serving static files from:', distPath);
+} else {
+    console.warn('Client dist directory not found. Static files will not be served.');
+    console.warn('Run "npm run build" to build the client application.');
+}
 
 const { initCronJobs } = require('./services/cronJobs');
 const { initDatabase } = require('./db/init');
@@ -34,10 +42,27 @@ app.get('/api/prices/current', async (req, res) => {
     }
 });
 
-// The "catchall" handler - MUST be last
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
-});
+// The "catchall" handler - MUST be last (only if dist exists)
+const indexHtmlPath = path.join(__dirname, '../client/dist/index.html');
+if (fs.existsSync(indexHtmlPath)) {
+    app.get('*', (req, res) => {
+        res.sendFile(indexHtmlPath);
+    });
+} else {
+    // If no client build, just return API info for non-API routes
+    app.get('*', (req, res) => {
+        if (req.path.startsWith('/api')) {
+            res.status(404).json({ error: 'API endpoint not found' });
+        } else {
+            res.status(503).json({ 
+                error: 'Client application not built', 
+                message: 'Please run "npm run build" to build the client application',
+                api: '/api/health - Health check',
+                prices: '/api/prices/current - Get current prices'
+            });
+        }
+    });
+}
 
 // Start server
 const startServer = async () => {

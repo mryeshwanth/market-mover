@@ -7,6 +7,7 @@
         "install-server": "cd server && npm install",
         "install-chrome": "cd server && npx puppeteer browsers install chrome || echo 'Chrome installation skipped (may use system Chrome)'",
         "build": "cd client && npm run build",
+        "build:all": "npm run build && echo 'Client build completed'",
         "start": "cd server && node server.js"
     },
     "engines": {
