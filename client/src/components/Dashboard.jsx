@@ -34,10 +34,13 @@ const PriceCard = ({ title, openingPrice, closingPrice, performance, currency = 
             padding: '20px', 
             boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
             width: '100%',
+            maxWidth: '100%',
             minHeight: '200px',
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'space-between'
+            justifyContent: 'space-between',
+            boxSizing: 'border-box',
+            overflow: 'hidden'
         }}>
             <h3 style={{ 
                 margin: '0 0 16px 0', 
@@ -146,12 +149,14 @@ const Dashboard = () => {
         backgroundColor: '#f5f5f5',
         minHeight: '100vh',
         width: '100%',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        overflowX: 'hidden'
     };
 
     const headerStyle = {
         marginBottom: '30px',
-        textAlign: 'center'
+        textAlign: 'center',
+        width: '100%'
     };
 
     const sectionTitleStyle = {
@@ -168,28 +173,56 @@ const Dashboard = () => {
         gap: '20px',
         marginBottom: '40px',
         width: '100%',
-        boxSizing: 'border-box'
+        maxWidth: '100%',
+        boxSizing: 'border-box',
+        gridAutoRows: 'minmax(auto, 1fr)'
     };
 
     // Media query styles will be handled via CSS
     return (
         <>
             <style>{`
+                * {
+                    box-sizing: border-box;
+                }
                 @media (max-width: 768px) {
                     .dashboard-container {
                         padding: 15px !important;
+                        width: 100% !important;
+                        margin: 0 auto !important;
+                    }
+                    header {
+                        text-align: center !important;
+                        width: 100% !important;
+                        margin: 0 auto 30px auto !important;
+                    }
+                    header h1 {
+                        text-align: center !important;
+                        margin: 0 auto !important;
                     }
                     .section-title {
                         font-size: 1em !important;
                         margin-bottom: 15px !important;
+                        text-align: left !important;
+                        width: 100% !important;
                     }
                     .cards-grid {
+                        display: grid !important;
                         grid-template-columns: 1fr !important;
                         gap: 15px !important;
                         margin-bottom: 30px !important;
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        padding: 0 !important;
+                        margin-left: 0 !important;
+                        margin-right: 0 !important;
                     }
                     .card {
                         padding: 16px !important;
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        margin: 0 !important;
+                        box-sizing: border-box !important;
                     }
                     .card h3 {
                         font-size: 0.75em !important;
@@ -201,26 +234,44 @@ const Dashboard = () => {
                 @media (min-width: 769px) and (max-width: 1024px) {
                     .dashboard-container {
                         padding: 20px !important;
+                        width: 100% !important;
                     }
                     .cards-grid {
                         display: grid !important;
                         grid-template-columns: repeat(3, 1fr) !important;
                         gap: 15px !important;
                         width: 100% !important;
+                        max-width: 100% !important;
+                        box-sizing: border-box !important;
                     }
                     .card {
                         padding: 18px !important;
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        box-sizing: border-box !important;
+                        overflow: hidden !important;
                     }
                     .card span {
                         font-size: 1.2em !important;
                     }
                 }
                 @media (min-width: 1025px) {
+                    .dashboard-container {
+                        width: 100% !important;
+                    }
                     .cards-grid {
                         display: grid !important;
                         grid-template-columns: repeat(3, 1fr) !important;
                         gap: 20px !important;
                         width: 100% !important;
+                        max-width: 100% !important;
+                        box-sizing: border-box !important;
+                    }
+                    .card {
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        box-sizing: border-box !important;
+                        overflow: hidden !important;
                     }
                 }
             `}</style>
