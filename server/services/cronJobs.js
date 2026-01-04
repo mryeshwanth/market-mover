@@ -136,11 +136,11 @@ const initCronJobs = () => {
     }
     console.log(`✓ Gold Daily:        Every day at 08:00 IST (Next: ${nextGoldDaily.format('YYYY-MM-DD HH:mm')} IST)`);
     
-    const nextGoldTest = now.clone().hour(15).minute(7).second(0);
+    const nextGoldTest = now.clone().hour(15).minute(20).second(0);
     if (nextGoldTest.isBefore(now)) {
         nextGoldTest.add(1, 'day');
     }
-    console.log(`✓ Gold Test:         Every day at 15:07 IST (Next: ${nextGoldTest.format('YYYY-MM-DD HH:mm')} IST)`);
+    console.log(`✓ Gold Test:         Every day at 15:20 IST (Next: ${nextGoldTest.format('YYYY-MM-DD HH:mm')} IST)`);
     
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
@@ -188,9 +188,9 @@ const initCronJobs = () => {
         }
     }, { timezone: TZ });
 
-    // GOLD - Test Capture (15:07 IST - temporary for testing today)
-    cron.schedule('7 15 * * *', async () => {
-        console.log("\n=== Running Gold Test Capture (15:07 IST) ===");
+    // GOLD - Test Capture (15:20 IST - temporary for testing today)
+    cron.schedule('20 15 * * *', async () => {
+        console.log("\n=== Running Gold Test Capture (15:20 IST) ===");
         const today = moment.tz(TZ).format('YYYY-MM-DD');
         
         // Check if already captured today
