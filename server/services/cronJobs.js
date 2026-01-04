@@ -83,6 +83,66 @@ async function retryGoldCapture(attemptNumber = 1, maxAttempts = 10) {
 
 const initCronJobs = () => {
     console.log("Initializing Cron Jobs...");
+    
+    const now = moment.tz(TZ);
+    const currentTime = now.format('YYYY-MM-DD HH:mm:ss');
+    const dayOfWeek = now.day(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+    const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+    
+    console.log(`\nCurrent Time (IST): ${currentTime}`);
+    console.log(`Day of Week: ${now.format('dddd')} (${isWeekday ? 'Weekday' : 'Weekend'})\n`);
+    
+    console.log("Scheduled Cron Jobs:");
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    
+    if (isWeekday) {
+        const nextNiftyOpen = now.clone().hour(9).minute(20).second(0);
+        if (nextNiftyOpen.isBefore(now)) {
+            nextNiftyOpen.add(1, 'day');
+        }
+        console.log(`✓ Nifty Opening:     Every weekday at 09:20 IST (Next: ${nextNiftyOpen.format('YYYY-MM-DD HH:mm')} IST)`);
+        
+        const nextNiftyClose = now.clone().hour(15).minute(40).second(0);
+        if (nextNiftyClose.isBefore(now)) {
+            nextNiftyClose.add(1, 'day');
+        }
+        console.log(`✓ Nifty Closing:     Every weekday at 15:40 IST (Next: ${nextNiftyClose.format('YYYY-MM-DD HH:mm')} IST)`);
+        
+        const nextNasdaqOpen = now.clone().hour(19).minute(30).second(0);
+        if (nextNasdaqOpen.isBefore(now)) {
+            nextNasdaqOpen.add(1, 'day');
+        }
+        console.log(`✓ Nasdaq Opening:   Every weekday at 19:30 IST (Next: ${nextNasdaqOpen.format('YYYY-MM-DD HH:mm')} IST)`);
+        
+        const nextNasdaqClose = now.clone().hour(2).minute(0).second(0).add(1, 'day');
+        if (nextNasdaqClose.isBefore(now)) {
+            nextNasdaqClose.add(1, 'day');
+        }
+        console.log(`✓ Nasdaq Closing:   Every weekday at 02:00 IST next day (Next: ${nextNasdaqClose.format('YYYY-MM-DD HH:mm')} IST)`);
+    } else {
+        const nextWeekday = now.clone().day(1); // Next Monday
+        if (nextWeekday.isBefore(now)) {
+            nextWeekday.add(7, 'days');
+        }
+        console.log(`✓ Nifty Opening:     Every weekday at 09:20 IST (Next: ${nextWeekday.format('YYYY-MM-DD')} 09:20 IST)`);
+        console.log(`✓ Nifty Closing:     Every weekday at 15:40 IST (Next: ${nextWeekday.format('YYYY-MM-DD')} 15:40 IST)`);
+        console.log(`✓ Nasdaq Opening:   Every weekday at 19:30 IST (Next: ${nextWeekday.format('YYYY-MM-DD')} 19:30 IST)`);
+        console.log(`✓ Nasdaq Closing:   Every weekday at 02:00 IST next day (Next: ${nextWeekday.clone().add(1, 'day').format('YYYY-MM-DD')} 02:00 IST)`);
+    }
+    
+    const nextGoldDaily = now.clone().hour(8).minute(0).second(0);
+    if (nextGoldDaily.isBefore(now)) {
+        nextGoldDaily.add(1, 'day');
+    }
+    console.log(`✓ Gold Daily:        Every day at 08:00 IST (Next: ${nextGoldDaily.format('YYYY-MM-DD HH:mm')} IST)`);
+    
+    const nextGoldTest = now.clone().hour(14).minute(40).second(0);
+    if (nextGoldTest.isBefore(now)) {
+        nextGoldTest.add(1, 'day');
+    }
+    console.log(`✓ Gold Test:         Every day at 14:40 IST (Next: ${nextGoldTest.format('YYYY-MM-DD HH:mm')} IST)`);
+    
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
     // NIFTY - Daily Opening (Every weekday 09:20 IST)
     cron.schedule('20 9 * * 1-5', async () => {
@@ -128,9 +188,9 @@ const initCronJobs = () => {
         }
     }, { timezone: TZ });
 
-    // GOLD - Test Capture (13:45 IST - temporary for testing)
-    cron.schedule('45 13 * * *', async () => {
-        console.log("\n=== Running Gold Test Capture (13:45 IST) ===");
+    // GOLD - Test Capture (14:40 IST - temporary for testing today)
+    cron.schedule('40 14 * * *', async () => {
+        console.log("\n=== Running Gold Test Capture (14:40 IST) ===");
         const today = moment.tz(TZ).format('YYYY-MM-DD');
         
         // Check if already captured today
