@@ -80,9 +80,36 @@ async function scrapeGoldPriceFromSource(source) {
         };
 
         // For production environments, try to find Chrome/Chromium in common locations
+        // First, try to get Chrome from Puppeteer's cache
+        const puppeteerCacheDir = process.env.PUPPETEER_CACHE_DIR || 
+                                   path.join(process.cwd(), 'node_modules', '.cache', 'puppeteer');
+        
+        // Try to find Chrome in Puppeteer's cache directory
+        let puppeteerChromePath = null;
+        try {
+            const chromeVersionsDir = path.join(puppeteerCacheDir, 'chrome');
+            if (fs.existsSync(chromeVersionsDir)) {
+                const versions = fs.readdirSync(chromeVersionsDir);
+                if (versions.length > 0) {
+                    const latestVersion = versions.sort().reverse()[0];
+                    const chromePath = path.join(chromeVersionsDir, latestVersion, 
+                        process.platform === 'win32' ? 'chrome-win' : 
+                        process.platform === 'darwin' ? 'chrome-mac' : 'chrome-linux',
+                        process.platform === 'win32' ? 'chrome.exe' : 
+                        process.platform === 'darwin' ? 'Google Chrome.app/Contents/MacOS/Google Chrome' : 'chrome');
+                    if (fs.existsSync(chromePath)) {
+                        puppeteerChromePath = chromePath;
+                    }
+                }
+            }
+        } catch (e) {
+            // Ignore errors
+        }
+
         const possibleChromePaths = [
             process.env.CHROME_PATH,
             process.env.PUPPETEER_EXECUTABLE_PATH,
+            puppeteerChromePath,
             '/usr/bin/chromium',
             '/usr/bin/chromium-browser',
             '/usr/bin/google-chrome',
