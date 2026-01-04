@@ -167,7 +167,8 @@ const Dashboard = () => {
         gridTemplateColumns: 'repeat(3, 1fr)',
         gap: '20px',
         marginBottom: '40px',
-        width: '100%'
+        width: '100%',
+        boxSizing: 'border-box'
     };
 
     // Media query styles will be handled via CSS
@@ -202,8 +203,10 @@ const Dashboard = () => {
                         padding: 20px !important;
                     }
                     .cards-grid {
+                        display: grid !important;
                         grid-template-columns: repeat(3, 1fr) !important;
                         gap: 15px !important;
+                        width: 100% !important;
                     }
                     .card {
                         padding: 18px !important;
@@ -214,8 +217,10 @@ const Dashboard = () => {
                 }
                 @media (min-width: 1025px) {
                     .cards-grid {
+                        display: grid !important;
                         grid-template-columns: repeat(3, 1fr) !important;
                         gap: 20px !important;
+                        width: 100% !important;
                     }
                 }
             `}</style>
