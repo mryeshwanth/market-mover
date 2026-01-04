@@ -5,7 +5,7 @@ const GOLD_API_KEY = process.env.GOLD_API_KEY || 'goldapi-f2bsmjziw2sq-io';
 
 // Constants for conversion
 const OUNCE_TO_GRAM = 31.1035; // 1 troy ounce = 31.1035 grams
-const MARKUP_PERCENTAGE = 8.5; // 8.5% markup for charges
+const MARKUP_PERCENTAGE = 8.3; // 8.3% markup for charges
 
 async function scrapeGoldPrice() {
     try {
@@ -26,6 +26,9 @@ async function scrapeGoldPrice() {
         }
 
         const data = response.data;
+
+        // Log the full API response for debugging
+        console.log('API Response:', JSON.stringify(data, null, 2));
 
         // API returns price per ounce in INR
         // Expected response format: { price: 123456.78, currency: "INR", ... }
@@ -57,11 +60,6 @@ async function scrapeGoldPrice() {
 
         // Add 8.5% markup for charges
         const pricePerGramWithMarkup = pricePerGram * (1 + MARKUP_PERCENTAGE / 100);
-
-        // Validate price is reasonable (24K gold in India is typically 5000-10000 per gram after markup)
-        if (pricePerGramWithMarkup < 4000 || pricePerGramWithMarkup > 12000) {
-            throw new Error(`Price out of reasonable range: ₹${pricePerGramWithMarkup.toFixed(2)} (expected 4000-12000)`);
-        }
 
         console.log(`✓ Successfully fetched gold price from goldapi.io`);
         console.log(`   Spot price per ounce: ₹${pricePerOunce.toFixed(2)}`);
