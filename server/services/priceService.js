@@ -71,6 +71,34 @@ const getPriceAnalysis = async () => {
             return null;
         };
 
+        // Helper: Get last available weekday opening (for Nifty/Nasdaq)
+        const getLastAvailableWeekdayOpening = async (startDate, endDate, captureType, assetField) => {
+            // Start from endDate and go backwards, skipping weekends
+            for (let i = 0; i <= 7; i++) {
+                const checkDate = endDate.clone().subtract(i, 'days');
+                
+                // Skip weekends
+                if (checkDate.day() === 0 || checkDate.day() === 6) continue;
+                
+                // Don't go before startDate
+                if (checkDate.isBefore(startDate, 'day')) break;
+                
+                const query = `
+                    SELECT * FROM price_captures 
+                    WHERE (captured_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date = $1 
+                    AND capture_time = $2
+                    AND ${assetField} IS NOT NULL
+                    ORDER BY captured_at ASC 
+                    LIMIT 1
+                `;
+                const res = await pool.query(query, [checkDate.format('YYYY-MM-DD'), captureType]);
+                if (res.rows.length > 0) {
+                    return res.rows[0];
+                }
+            }
+            return null;
+        };
+
         // Helper: Get Nasdaq opening price for a specific date
         const getNasdaqOpeningPrice = async (date) => {
             const query = `
@@ -232,7 +260,57 @@ const getPriceAnalysis = async () => {
             monthGoldClose = await getLastAvailableDay(monthFirst, now);
         }
 
-        // 4. Calculate Changes
+        // 4. Calculate Daily Performance
+        // For daily: Today's opening → Today's closing (or last available if weekend/holiday)
+        const today = now.clone();
+        const isWeekend = today.day() === 0 || today.day() === 6; // Sunday = 0, Saturday = 6
+        
+        // Nifty Daily: Today's opening → Today's closing (or last available weekday)
+        let dailyNiftyOpen = null;
+        let dailyNiftyClose = null;
+        
+        if (!isWeekend) {
+            // Try to get today's data first
+            dailyNiftyOpen = await getNiftyOpeningPrice(today);
+            dailyNiftyClose = await getNiftyClosingPrice(today);
+        }
+        
+        // If weekend or no data for today, use last available weekday
+        if (isWeekend || !dailyNiftyOpen) {
+            dailyNiftyOpen = await getLastAvailableWeekdayOpening(today.clone().subtract(7, 'days'), today, 'nifty_opening', 'nifty');
+        }
+        if (isWeekend || !dailyNiftyClose) {
+            dailyNiftyClose = await getLastAvailableWeekdayClosing(today.clone().subtract(7, 'days'), today, 'nifty_closing', 'nifty');
+        }
+        
+        // Nasdaq Daily: Today's opening → Today's closing (or last available weekday)
+        let dailyNasdaqOpen = null;
+        let dailyNasdaqClose = null;
+        
+        if (!isWeekend) {
+            // Try to get today's data first
+            dailyNasdaqOpen = await getNasdaqOpeningPrice(today);
+            dailyNasdaqClose = await getNasdaqClosingPrice(today);
+        }
+        
+        // If weekend or no data for today, use last available weekday
+        if (isWeekend || !dailyNasdaqOpen) {
+            dailyNasdaqOpen = await getLastAvailableWeekdayOpening(today.clone().subtract(7, 'days'), today, 'nasdaq_opening', 'nasdaq');
+        }
+        if (isWeekend || !dailyNasdaqClose) {
+            dailyNasdaqClose = await getLastAvailableWeekdayClosing(today.clone().subtract(7, 'days'), today, 'nasdaq_closing', 'nasdaq');
+        }
+        
+        // Gold Daily: Today's 08:00 capture (or last available)
+        let dailyGold = await getGoldPrice(today);
+        if (!dailyGold) {
+            dailyGold = await getLastAvailableDay(today.clone().subtract(7, 'days'), today);
+        }
+        // For gold daily, opening and closing are the same (single daily capture)
+        const dailyGoldOpen = dailyGold;
+        const dailyGoldClose = dailyGold;
+
+        // 5. Calculate Changes
         const calculateChange = (endVal, startVal) => {
             if (!endVal || !startVal) return { change: 0, percent: 0 };
             const diff = Number(endVal) - Number(startVal);
@@ -249,6 +327,29 @@ const getPriceAnalysis = async () => {
                 nasdaq: Number(current.nasdaq),
                 gold: Number(current.gold_24k_per_1g),
                 date: current.captured_at
+            },
+            daily: {
+                nifty: {
+                    ...calculateChange(dailyNiftyClose?.nifty, dailyNiftyOpen?.nifty),
+                    openingPrice: Number(dailyNiftyOpen?.nifty) || 0,
+                    closingPrice: Number(dailyNiftyClose?.nifty) || 0,
+                    startDate: dailyNiftyOpen?.captured_at,
+                    endDate: dailyNiftyClose?.captured_at
+                },
+                nasdaq: {
+                    ...calculateChange(dailyNasdaqClose?.nasdaq, dailyNasdaqOpen?.nasdaq),
+                    openingPrice: Number(dailyNasdaqOpen?.nasdaq) || 0,
+                    closingPrice: Number(dailyNasdaqClose?.nasdaq) || 0,
+                    startDate: dailyNasdaqOpen?.captured_at,
+                    endDate: dailyNasdaqClose?.captured_at
+                },
+                gold: {
+                    ...calculateChange(dailyGoldClose?.gold_24k_per_1g, dailyGoldOpen?.gold_24k_per_1g),
+                    openingPrice: Number(dailyGoldOpen?.gold_24k_per_1g) || 0,
+                    closingPrice: Number(dailyGoldClose?.gold_24k_per_1g) || 0,
+                    startDate: dailyGoldOpen?.captured_at,
+                    endDate: dailyGoldClose?.captured_at
+                }
             },
             weekly: {
                 nifty: {

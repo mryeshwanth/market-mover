@@ -89,6 +89,11 @@ const Dashboard = () => {
     }
 
     const current = data?.current || { nifty: 0, nasdaq: 0, gold: 0 };
+    const daily = data?.daily || {
+        nifty: { change: 0, percent: 0, openingPrice: 0, closingPrice: 0 },
+        nasdaq: { change: 0, percent: 0, openingPrice: 0, closingPrice: 0 },
+        gold: { change: 0, percent: 0, openingPrice: 0, closingPrice: 0 }
+    };
     const weekly = data?.weekly || {
         nifty: { change: 0, percent: 0, openingPrice: 0, closingPrice: 0 },
         nasdaq: { change: 0, percent: 0, openingPrice: 0, closingPrice: 0 },
@@ -105,6 +110,37 @@ const Dashboard = () => {
             <header style={{ marginBottom: '15px', textAlign: 'center' }}>
                 <h1 style={{ fontSize: '1.5em', margin: 0, color: '#000' }}>Market Mover</h1>
             </header>
+
+            {/* Daily Performance Section */}
+            <h2 style={{ fontSize: '1em', marginBottom: '12px', textAlign: 'center', color: '#000', border: 'none', borderBottom: 'none' }}>Daily Performance</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '40px' }}>
+                <PriceCard
+                    title="Nifty 50"
+                    openingPrice={daily.nifty.openingPrice}
+                    closingPrice={daily.nifty.closingPrice}
+                    performance={daily.nifty}
+                    startDate={daily.nifty.startDate}
+                    endDate={daily.nifty.endDate}
+                />
+                <PriceCard
+                    title="Nasdaq 100"
+                    openingPrice={daily.nasdaq.openingPrice}
+                    closingPrice={daily.nasdaq.closingPrice}
+                    performance={daily.nasdaq}
+                    currency="$"
+                    startDate={daily.nasdaq.startDate}
+                    endDate={daily.nasdaq.endDate}
+                />
+                <PriceCard
+                    title="Gold 24K (1g)"
+                    openingPrice={daily.gold.openingPrice}
+                    closingPrice={daily.gold.closingPrice}
+                    performance={daily.gold}
+                    startDate={daily.gold.startDate}
+                    endDate={daily.gold.endDate}
+                    isGold={true}
+                />
+            </div>
 
             {/* Weekly Performance Section */}
             <h2 style={{ fontSize: '1em', marginBottom: '12px', textAlign: 'center', color: '#000', border: 'none', borderBottom: 'none' }}>Weekly Performance</h2>
