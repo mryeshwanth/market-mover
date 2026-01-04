@@ -1,78 +1,76 @@
 const axios = require('axios');
-const cheerio = require('cheerio');
 
-const GOLD_URL = process.env.GOODRETURNS_GOLD_URL || 'https://www.goodreturns.in/gold-rates/';
+const GOLD_API_URL = process.env.GOLD_API_URL || 'https://api.indiagoldratesapi.com/rates';
+const GOLD_API_KEY = process.env.GOLD_API_KEY || '';
 
 async function scrapeGoldPrice() {
     try {
-        const response = await axios.get(GOLD_URL, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-        });
+        const headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'application/json'
+        };
 
-        const $ = cheerio.load(response.data);
-
-        // Selector for 24K Gold per 1g - Adjust selector based on actual site structure
-        // This is a common pattern, but might need adjustment if site changes
-        // Usually in a table, looking for "24 Carat" and "1 Gram" or "1g"
-
-        // Improved selector logic: Look for the table row containing "24 Carat gold" and "1 gram"
-        // Note: This is an implementation guess and might need refinement against the live site
-
-        let priceText = '';
-
-        // Example strategy: search for specific text or class
-        // Often GoodReturns has tables with classes or IDs
-        // Let's assume a generic robust search
-
-        // Finding the table that likely contains the rates
-        $('.gold_silver_table').first().find('tr').each((i, row) => {
-            const rowText = $(row).text().toLowerCase();
-            // Look for 24 carat and 1 gram (or 1g)
-            if (rowText.includes('24 carat') && (rowText.includes('1 gram') || rowText.includes('1g') || rowText.includes('per gram'))) {
-                // The price is usually in the second column or last column
-                priceText = $(row).find('td').eq(1).text().trim(); // Adjust index as needed
-            }
-        });
-        
-        // If not found, try alternative: sometimes 10g price is shown, we need to divide by 10
-        if (!priceText) {
-            $('.gold_silver_table').first().find('tr').each((i, row) => {
-                const rowText = $(row).text().toLowerCase();
-                if (rowText.includes('24 carat') && (rowText.includes('10 gram') || rowText.includes('10g'))) {
-                    const price10g = $(row).find('td').eq(1).text().trim();
-                    const price10gNum = parseFloat(price10g.replace(/[^0-9.]/g, ''));
-                    if (!isNaN(price10gNum) && price10gNum > 0) {
-                        // Convert 10g price to 1g price
-                        priceText = (price10gNum / 10).toString();
-                    }
-                }
-            });
+        // Add Authorization header if API key is provided
+        if (GOLD_API_KEY) {
+            headers['Authorization'] = `Bearer ${GOLD_API_KEY}`;
         }
 
-        if (!priceText) {
-            // Fallback: Try a more specific selector if generic search fails
-            // Checks for common specific elements
-            const specificEl = $('#current-price-24k'); // Hypothetical ID
-            if (specificEl.length) priceText = specificEl.text().trim();
+        const response = await axios.get(GOLD_API_URL, {
+            headers: headers,
+            timeout: 10000 // 10 second timeout
+        });
+
+        if (response.status !== 200) {
+            throw new Error(`API returned status ${response.status}`);
         }
 
-        // Clean the price string (remove symbols, commas)
-        const price = parseFloat(priceText.replace(/[^0-9.]/g, ''));
+        const data = response.data;
 
-        if (isNaN(price) || price === 0) {
-            throw new Error(`Failed to parse gold price from text: "${priceText}"`);
+        // API typically returns gold_999 (24K) per 10g, so we need to divide by 10 for 1g
+        // Handle different possible response formats
+        let pricePer10g = null;
+
+        if (data.gold_999) {
+            pricePer10g = parseFloat(data.gold_999);
+        } else if (data.gold_24k) {
+            pricePer10g = parseFloat(data.gold_24k);
+        } else if (data.rate) {
+            pricePer10g = parseFloat(data.rate);
+        } else if (data.price) {
+            pricePer10g = parseFloat(data.price);
+        } else if (typeof data === 'number') {
+            pricePer10g = parseFloat(data);
+        } else {
+            // Try to find any numeric value that looks like a gold price (typically 60000-80000 for 10g)
+            const values = Object.values(data).filter(v => typeof v === 'number' && v > 10000 && v < 200000);
+            if (values.length > 0) {
+                pricePer10g = values[0];
+            }
+        }
+
+        if (!pricePer10g || isNaN(pricePer10g) || pricePer10g <= 0) {
+            throw new Error(`Failed to extract gold price from API response: ${JSON.stringify(data)}`);
+        }
+
+        // Convert from per 10g to per 1g (24K)
+        const pricePer1g = pricePer10g / 10;
+
+        if (pricePer1g <= 0 || isNaN(pricePer1g)) {
+            throw new Error(`Invalid price calculated: ${pricePer1g} from ${pricePer10g}`);
         }
 
         return {
-            price: price,
+            price: pricePer1g,
             currency: 'INR',
             timestamp: new Date()
         };
 
     } catch (error) {
-        console.error('Error scraping gold price:', error.message);
+        console.error('Error fetching gold price from API:', error.message);
+        if (error.response) {
+            console.error('API Response Status:', error.response.status);
+            console.error('API Response Data:', error.response.data);
+        }
         throw error;
     }
 }

@@ -43,6 +43,8 @@ class CaptureService {
                 goldPrice = goldData.price;
             } catch (e) {
                 console.error("Failed to fetch gold price", e);
+                // Don't insert NULL record if gold fetch fails - throw error to prevent insertion
+                throw new Error(`Gold price fetch failed: ${e.message}`);
             }
         }
 
