@@ -41,6 +41,8 @@ class CaptureService {
             try {
                 const goldData = await goldScraper.scrapeGoldPrice();
                 goldPrice = goldData.price;
+                // Store source information for logging
+                this.lastGoldSource = goldData.source;
             } catch (e) {
                 console.error("Failed to fetch gold price", e);
                 // Don't insert NULL record if gold fetch fails - throw error to prevent insertion
@@ -122,7 +124,7 @@ class CaptureService {
             RETURNING id
         `;
 
-        const result = await db.query(insertQuery, [
+        const dbResult = await db.query(insertQuery, [
             niftyPrice,
             nasdaqPrice,
             goldPrice,
@@ -133,13 +135,20 @@ class CaptureService {
             changes.gold_changed
         ]);
 
-        const newId = result.rows[0].id;
+        const newId = dbResult.rows[0].id;
 
-        return {
+        const result = {
             id: newId,
             ...currentCaptureRaw,
             ...changes
         };
+
+        // Add source information for gold captures
+        if (type === 'gold_daily' && this.lastGoldSource) {
+            result.source = this.lastGoldSource;
+        }
+
+        return result;
     }
 }
 
