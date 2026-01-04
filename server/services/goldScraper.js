@@ -5,7 +5,7 @@ const GOLD_API_KEY = process.env.GOLD_API_KEY || 'goldapi-f2bsmjziw2sq-io';
 
 // Constants for conversion
 const OUNCE_TO_GRAM = 31.1035; // 1 troy ounce = 31.1035 grams
-const MARKUP_PERCENTAGE = 8.5; // 8.5% markup for charges
+const MARKUP_PERCENTAGE = 8.3; // 8.3% markup for charges
 
 async function scrapeGoldPrice() {
     try {
