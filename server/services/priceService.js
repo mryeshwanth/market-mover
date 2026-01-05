@@ -261,44 +261,90 @@ const getPriceAnalysis = async () => {
         }
 
         // 4. Calculate Daily Performance
-        // For daily: Today's opening → Today's closing (or last available if weekend/holiday)
+        // For daily: Today's opening → Today's closing (or current price if market is still open)
         const today = now.clone();
         const isWeekend = today.day() === 0 || today.day() === 6; // Sunday = 0, Saturday = 6
+        const currentHour = today.hour();
+        const currentMinute = today.minute();
         
-        // Nifty Daily: Today's opening → Today's closing (or last available weekday)
+        // Check if Nifty market is currently open (9:20 AM - 3:40 PM IST on weekdays)
+        const isNiftyMarketOpen = !isWeekend && 
+            ((currentHour > 9 || (currentHour === 9 && currentMinute >= 20)) && 
+             (currentHour < 15 || (currentHour === 15 && currentMinute <= 40)));
+        
+        // Nifty Daily: Today's opening → Today's closing (or current price if market is open)
         let dailyNiftyOpen = null;
         let dailyNiftyClose = null;
+        let dailyNiftyCloseDate = null;
         
         if (!isWeekend) {
             // Try to get today's data first
             dailyNiftyOpen = await getNiftyOpeningPrice(today);
             dailyNiftyClose = await getNiftyClosingPrice(today);
+            
+            // If market is open and we have opening but no closing, use current price
+            if (isNiftyMarketOpen && dailyNiftyOpen && !dailyNiftyClose && current.nifty) {
+                // Use current price as closing price
+                dailyNiftyClose = {
+                    ...dailyNiftyOpen,
+                    nifty: current.nifty,
+                    captured_at: now.toISOString() // Use current time as closing time
+                };
+                dailyNiftyCloseDate = now.toISOString();
+            } else if (dailyNiftyClose) {
+                dailyNiftyCloseDate = dailyNiftyClose.captured_at;
+            }
         }
         
         // If weekend or no data for today, use last available weekday
         if (isWeekend || !dailyNiftyOpen) {
             dailyNiftyOpen = await getLastAvailableWeekdayOpening(today.clone().subtract(7, 'days'), today, 'nifty_opening', 'nifty');
         }
-        if (isWeekend || !dailyNiftyClose) {
+        if ((isWeekend || !dailyNiftyClose) && !isNiftyMarketOpen) {
             dailyNiftyClose = await getLastAvailableWeekdayClosing(today.clone().subtract(7, 'days'), today, 'nifty_closing', 'nifty');
+            if (dailyNiftyClose) {
+                dailyNiftyCloseDate = dailyNiftyClose.captured_at;
+            }
         }
         
-        // Nasdaq Daily: Today's opening → Today's closing (or last available weekday)
+        // Check if Nasdaq market is currently open (roughly 7:00 PM IST - 2:00 AM IST next day on weekdays)
+        // Nasdaq trades 9:30 AM - 4:00 PM EST/EDT, which is ~7:00 PM - 1:30 AM IST (EST) or ~8:00 PM - 2:30 AM IST (EDT)
+        const isNasdaqMarketOpen = !isWeekend && 
+            (currentHour >= 19 || currentHour < 2 || (currentHour === 2 && currentMinute <= 30));
+        
+        // Nasdaq Daily: Today's opening → Today's closing (or current price if market is open)
         let dailyNasdaqOpen = null;
         let dailyNasdaqClose = null;
+        let dailyNasdaqCloseDate = null;
         
         if (!isWeekend) {
             // Try to get today's data first
             dailyNasdaqOpen = await getNasdaqOpeningPrice(today);
             dailyNasdaqClose = await getNasdaqClosingPrice(today);
+            
+            // If market is open and we have opening but no closing, use current price
+            if (isNasdaqMarketOpen && dailyNasdaqOpen && !dailyNasdaqClose && current.nasdaq) {
+                // Use current price as closing price
+                dailyNasdaqClose = {
+                    ...dailyNasdaqOpen,
+                    nasdaq: current.nasdaq,
+                    captured_at: now.toISOString() // Use current time as closing time
+                };
+                dailyNasdaqCloseDate = now.toISOString();
+            } else if (dailyNasdaqClose) {
+                dailyNasdaqCloseDate = dailyNasdaqClose.captured_at;
+            }
         }
         
         // If weekend or no data for today, use last available weekday
         if (isWeekend || !dailyNasdaqOpen) {
             dailyNasdaqOpen = await getLastAvailableWeekdayOpening(today.clone().subtract(7, 'days'), today, 'nasdaq_opening', 'nasdaq');
         }
-        if (isWeekend || !dailyNasdaqClose) {
+        if ((isWeekend || !dailyNasdaqClose) && !isNasdaqMarketOpen) {
             dailyNasdaqClose = await getLastAvailableWeekdayClosing(today.clone().subtract(7, 'days'), today, 'nasdaq_closing', 'nasdaq');
+            if (dailyNasdaqClose) {
+                dailyNasdaqCloseDate = dailyNasdaqClose.captured_at;
+            }
         }
         
         // Gold Daily: Today's 08:00 capture (or last available)
@@ -334,14 +380,14 @@ const getPriceAnalysis = async () => {
                     openingPrice: Number(dailyNiftyOpen?.nifty) || 0,
                     closingPrice: Number(dailyNiftyClose?.nifty) || 0,
                     startDate: dailyNiftyOpen?.captured_at,
-                    endDate: dailyNiftyClose?.captured_at
+                    endDate: dailyNiftyCloseDate || dailyNiftyClose?.captured_at
                 },
                 nasdaq: {
                     ...calculateChange(dailyNasdaqClose?.nasdaq, dailyNasdaqOpen?.nasdaq),
                     openingPrice: Number(dailyNasdaqOpen?.nasdaq) || 0,
                     closingPrice: Number(dailyNasdaqClose?.nasdaq) || 0,
                     startDate: dailyNasdaqOpen?.captured_at,
-                    endDate: dailyNasdaqClose?.captured_at
+                    endDate: dailyNasdaqCloseDate || dailyNasdaqClose?.captured_at
                 },
                 gold: {
                     ...calculateChange(dailyGoldClose?.gold_24k_per_1g, dailyGoldOpen?.gold_24k_per_1g),
