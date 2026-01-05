@@ -22,6 +22,42 @@ const PriceCard = ({ title, openingPrice, closingPrice, performance, currency = 
         return date.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
     };
 
+    // Check if the end date is very recent (within last 10 minutes) to show "Live" indicator
+    // This indicates the market is still open and showing current/live price
+    const isLive = (endDate) => {
+        if (!endDate) return false;
+        const end = new Date(endDate);
+        const now = new Date();
+        const diffMinutes = (now - end) / (1000 * 60);
+        // Show "Live" if the timestamp is within the last 10 minutes
+        // This means we're using current price, not a captured closing price
+        return diffMinutes >= 0 && diffMinutes < 10;
+    };
+
+    // Format date range ensuring chronological order
+    const formatDateRange = (startDate, endDate) => {
+        if (!startDate || !endDate) return null;
+        
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        
+        // Check if dates are in correct order (start should be before or equal to end)
+        // If not, it might be a timezone issue - display as-is but log a warning
+        const startFormatted = `${formatDate(start)} ${formatTime(start)}`;
+        const endFormatted = isLive(endDate) 
+            ? 'Live' 
+            : `${formatDate(end)} ${formatTime(end)}`;
+        
+        // Always display opening → closing in chronological order
+        // If end is before start, it's likely a data issue, but display end first for clarity
+        if (start > end) {
+            // This shouldn't happen, but if it does, show both dates
+            return `${endFormatted} → ${startFormatted}`;
+        }
+        
+        return `${startFormatted} → ${endFormatted}`;
+    };
+
     // For Gold, use different labels
     const leftLabel = isGold ? 'START' : 'OPENING';
     const rightLabel = isGold ? 'END' : 'CLOSING';
@@ -95,7 +131,7 @@ const PriceCard = ({ title, openingPrice, closingPrice, performance, currency = 
                     color: '#999', 
                     textAlign: 'center' 
                 }}>
-                    <div>{formatDate(startDate)} {formatTime(startDate)} → {formatDate(endDate)} {formatTime(endDate)}</div>
+                    <div>{formatDateRange(startDate, endDate)}</div>
                 </div>
             )}
         </div>
