@@ -1,5 +1,6 @@
 const { pool } = require('../db/database');
-const moment = require('moment');
+const moment = require('moment-timezone');
+const { getETDateForIST } = require('../utils/nasdaqTimeConverter');
 
 const getPriceAnalysis = async () => {
     try {
@@ -99,7 +100,7 @@ const getPriceAnalysis = async () => {
             return null;
         };
 
-        // Helper: Get Nasdaq opening price for a specific date
+        // Helper: Get Nasdaq opening price for a specific date (IST date)
         const getNasdaqOpeningPrice = async (date) => {
             const query = `
                 SELECT * FROM price_captures 
@@ -113,7 +114,7 @@ const getPriceAnalysis = async () => {
             return res.rows[0] || null;
         };
 
-        // Helper: Get Nasdaq closing price for a specific date
+        // Helper: Get Nasdaq closing price for a specific date (IST date)
         const getNasdaqClosingPrice = async (date) => {
             const query = `
                 SELECT * FROM price_captures 
@@ -125,6 +126,22 @@ const getPriceAnalysis = async () => {
             `;
             const res = await pool.query(query, [date.format('YYYY-MM-DD')]);
             return res.rows[0] || null;
+        };
+
+        // Helper: Get Nasdaq opening and closing for a specific US trading day
+        // US trading day opening is captured on that day's evening IST
+        // US trading day closing is captured on the next day's early morning IST
+        const getNasdaqPricesForUSTradingDay = async (usTradingDateET) => {
+            // Convert US trading day to IST to get the IST date when opening is captured
+            // Opening for US trading day Jan 6 is captured on Jan 6 evening IST
+            const openingISTDate = moment.tz(usTradingDateET.format('YYYY-MM-DD'), 'YYYY-MM-DD', 'Asia/Kolkata');
+            const opening = await getNasdaqOpeningPrice(openingISTDate);
+            
+            // Closing for US trading day Jan 6 is captured on Jan 7 early morning IST
+            const closingISTDate = openingISTDate.clone().add(1, 'day');
+            const closing = await getNasdaqClosingPrice(closingISTDate);
+            
+            return { opening, closing };
         };
 
         // Helper: Get Gold price for a specific date
@@ -312,15 +329,37 @@ const getPriceAnalysis = async () => {
         const isNasdaqMarketOpen = !isWeekend && 
             (currentHour >= 19 || currentHour < 2 || (currentHour === 2 && currentMinute <= 30));
         
-        // Nasdaq Daily: Today's opening → Today's closing (or current price if market is open)
+        // Nasdaq Daily: Get the current US trading day and show its opening → closing
+        // NASDAQ trades in US Eastern Time, so we need to determine the current US trading day
         let dailyNasdaqOpen = null;
         let dailyNasdaqClose = null;
         let dailyNasdaqCloseDate = null;
         
         if (!isWeekend) {
-            // Try to get today's data first
-            dailyNasdaqOpen = await getNasdaqOpeningPrice(today);
-            dailyNasdaqClose = await getNasdaqClosingPrice(today);
+            // Get the current US trading day based on IST time
+            const currentET = getETDateForIST(now);
+            const currentETDate = currentET.clone().startOf('day');
+            
+            // Determine which US trading day we should show
+            // If it's before 9:30 AM ET, show yesterday's completed trading day
+            // If it's after 4:00 PM ET, show today's completed trading day
+            // Otherwise, show today's trading day (in progress)
+            let usTradingDay = currentETDate.clone();
+            if (currentET.hour() < 9 || (currentET.hour() === 9 && currentET.minute() < 30)) {
+                // Before market open, show previous completed trading day
+                usTradingDay.subtract(1, 'day');
+                // Skip weekends
+                while (usTradingDay.day() === 0 || usTradingDay.day() === 6) {
+                    usTradingDay.subtract(1, 'day');
+                }
+            }
+            // If after 4 PM ET, today's trading day is complete, so show today
+            // Otherwise, we're in today's trading day (in progress)
+            
+            // Get opening and closing for this US trading day
+            const { opening, closing } = await getNasdaqPricesForUSTradingDay(usTradingDay);
+            dailyNasdaqOpen = opening;
+            dailyNasdaqClose = closing;
             
             // If market is open and we have opening but no closing, use current price
             if (isNasdaqMarketOpen && dailyNasdaqOpen && !dailyNasdaqClose && current.nasdaq) {
@@ -336,7 +375,7 @@ const getPriceAnalysis = async () => {
             }
         }
         
-        // If weekend or no data for today, use last available weekday
+        // If weekend or no data found, use last available weekday
         if (isWeekend || !dailyNasdaqOpen) {
             dailyNasdaqOpen = await getLastAvailableWeekdayOpening(today.clone().subtract(7, 'days'), today, 'nasdaq_opening', 'nasdaq');
         }
