@@ -335,27 +335,27 @@ const getPriceAnalysis = async () => {
         let dailyNasdaqClose = null;
         let dailyNasdaqCloseDate = null;
         
-        if (!isWeekend) {
-            // Get the current US trading day based on IST time
-            const currentET = getETDateForIST(now);
-            const currentETDate = currentET.clone().startOf('day');
-            
-            // Determine which US trading day we should show
-            // If it's before 9:30 AM ET, show yesterday's completed trading day
-            // If it's after 4:00 PM ET, show today's completed trading day
-            // Otherwise, show today's trading day (in progress)
-            let usTradingDay = currentETDate.clone();
-            if (currentET.hour() < 9 || (currentET.hour() === 9 && currentET.minute() < 30)) {
-                // Before market open, show previous completed trading day
+        // Get the current US trading day based on IST time (even for weekends, we need this for fallback)
+        const currentET = getETDateForIST(now);
+        const currentETDate = currentET.clone().startOf('day');
+        
+        // Determine which US trading day we should show
+        // If it's before 9:30 AM ET, show yesterday's completed trading day
+        // If it's after 4:00 PM ET, show today's completed trading day
+        // Otherwise, show today's trading day (in progress)
+        let usTradingDay = currentETDate.clone();
+        if (currentET.hour() < 9 || (currentET.hour() === 9 && currentET.minute() < 30)) {
+            // Before market open, show previous completed trading day
+            usTradingDay.subtract(1, 'day');
+            // Skip weekends
+            while (usTradingDay.day() === 0 || usTradingDay.day() === 6) {
                 usTradingDay.subtract(1, 'day');
-                // Skip weekends
-                while (usTradingDay.day() === 0 || usTradingDay.day() === 6) {
-                    usTradingDay.subtract(1, 'day');
-                }
             }
-            // If after 4 PM ET, today's trading day is complete, so show today
-            // Otherwise, we're in today's trading day (in progress)
-            
+        }
+        // If after 4 PM ET, today's trading day is complete, so show today
+        // Otherwise, we're in today's trading day (in progress)
+        
+        if (!isWeekend) {
             // Get opening and closing for this US trading day
             const { opening, closing } = await getNasdaqPricesForUSTradingDay(usTradingDay);
             dailyNasdaqOpen = opening;
@@ -375,14 +375,36 @@ const getPriceAnalysis = async () => {
             }
         }
         
-        // If weekend or no data found, use last available weekday
-        if (isWeekend || !dailyNasdaqOpen) {
-            dailyNasdaqOpen = await getLastAvailableWeekdayOpening(today.clone().subtract(7, 'days'), today, 'nasdaq_opening', 'nasdaq');
-        }
-        if ((isWeekend || !dailyNasdaqClose) && !isNasdaqMarketOpen) {
-            dailyNasdaqClose = await getLastAvailableWeekdayClosing(today.clone().subtract(7, 'days'), today, 'nasdaq_closing', 'nasdaq');
-            if (dailyNasdaqClose) {
-                dailyNasdaqCloseDate = dailyNasdaqClose.captured_at;
+        // If weekend or no data found, search backwards for a US trading day with both opening and closing
+        if (isWeekend || !dailyNasdaqOpen || !dailyNasdaqClose) {
+            // Try to find the most recent US trading day that has both opening and closing
+            let foundPair = false;
+            for (let daysBack = 0; daysBack <= 7; daysBack++) {
+                const checkETDate = usTradingDay.clone().subtract(daysBack, 'days');
+                // Skip weekends
+                if (checkETDate.day() === 0 || checkETDate.day() === 6) continue;
+                
+                const { opening, closing } = await getNasdaqPricesForUSTradingDay(checkETDate);
+                if (opening && closing) {
+                    dailyNasdaqOpen = opening;
+                    dailyNasdaqClose = closing;
+                    dailyNasdaqCloseDate = closing.captured_at;
+                    foundPair = true;
+                    break;
+                }
+            }
+            
+            // If still not found, fall back to individual searches (but this shouldn't happen)
+            if (!foundPair) {
+                if (!dailyNasdaqOpen) {
+                    dailyNasdaqOpen = await getLastAvailableWeekdayOpening(today.clone().subtract(7, 'days'), today, 'nasdaq_opening', 'nasdaq');
+                }
+                if (!dailyNasdaqClose && !isNasdaqMarketOpen) {
+                    dailyNasdaqClose = await getLastAvailableWeekdayClosing(today.clone().subtract(7, 'days'), today, 'nasdaq_closing', 'nasdaq');
+                    if (dailyNasdaqClose) {
+                        dailyNasdaqCloseDate = dailyNasdaqClose.captured_at;
+                    }
+                }
             }
         }
         
