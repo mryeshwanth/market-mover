@@ -286,17 +286,60 @@ const getPriceAnalysis = async () => {
             monthNiftyClose = await getLastAvailableWeekdayClosing(monthFirst, now, 'nifty_closing', 'nifty');
         }
 
-        // Nasdaq Monthly: 1st opening → Current day closing (or last available weekday closing)
-        const monthFirstNasdaqOpen = await getNasdaqOpeningPrice(monthFirst);
-        let monthNasdaqClose = null;
+        // Nasdaq Monthly: 1st of month US trading day opening → Current US trading day closing
+        // Convert IST month first to US trading day
+        const monthFirstET = getETDateForIST(monthFirst);
+        const monthFirstETDate = monthFirstET.clone().startOf('day');
+        // Find the 1st of month US trading day (skip weekends)
+        let monthFirstUSTradingDay = monthFirstETDate.clone();
+        while (monthFirstUSTradingDay.day() === 0 || monthFirstUSTradingDay.day() === 6) {
+            monthFirstUSTradingDay.add(1, 'day');
+        }
         
-        if (currentDay >= 1 && currentDay <= 5) {
-            monthNasdaqClose = await getNasdaqClosingPrice(now);
-            if (!monthNasdaqClose) {
-                monthNasdaqClose = await getLastAvailableWeekdayClosing(monthFirst, now, 'nasdaq_closing', 'nasdaq');
+        // Get 1st of month US trading day opening
+        const { opening: monthFirstOpen } = await getNasdaqPricesForUSTradingDay(monthFirstUSTradingDay);
+        let monthFirstNasdaqOpen = monthFirstOpen;
+        
+        // If 1st is weekend, try to find first available weekday opening in the month
+        if (!monthFirstNasdaqOpen) {
+            for (let i = 0; i <= 4; i++) {
+                const checkETDate = monthFirstUSTradingDay.clone().add(i, 'days');
+                if (checkETDate.day() === 0 || checkETDate.day() === 6) continue;
+                const { opening } = await getNasdaqPricesForUSTradingDay(checkETDate);
+                if (opening) {
+                    monthFirstNasdaqOpen = opening;
+                    break;
+                }
             }
-        } else {
-            monthNasdaqClose = await getLastAvailableWeekdayClosing(monthFirst, now, 'nasdaq_closing', 'nasdaq');
+        }
+        
+        // Get current/latest US trading day closing
+        const currentETForMonth = getETDateForIST(now);
+        const currentETDateForMonth = currentETForMonth.clone().startOf('day');
+        let currentUSTradingDayForMonth = currentETDateForMonth.clone();
+        if (currentETForMonth.hour() < 9 || (currentETForMonth.hour() === 9 && currentETForMonth.minute() < 30)) {
+            currentUSTradingDayForMonth.subtract(1, 'day');
+            while (currentUSTradingDayForMonth.day() === 0 || currentUSTradingDayForMonth.day() === 6) {
+                currentUSTradingDayForMonth.subtract(1, 'day');
+            }
+        }
+        
+        const { closing: currentMonthClose } = await getNasdaqPricesForUSTradingDay(currentUSTradingDayForMonth);
+        let monthNasdaqClose = currentMonthClose;
+        
+        // Fallback: if no closing found, search backwards
+        if (!monthNasdaqClose) {
+            for (let daysBack = 0; daysBack <= 31; daysBack++) {
+                const checkETDate = currentUSTradingDayForMonth.clone().subtract(daysBack, 'days');
+                if (checkETDate.day() === 0 || checkETDate.day() === 6) continue;
+                if (checkETDate.isBefore(monthFirstUSTradingDay, 'day')) break;
+                
+                const { closing } = await getNasdaqPricesForUSTradingDay(checkETDate);
+                if (closing) {
+                    monthNasdaqClose = closing;
+                    break;
+                }
+            }
         }
 
         // Gold Monthly: 1st 08:00 → Current day 08:00 (or last available day)
