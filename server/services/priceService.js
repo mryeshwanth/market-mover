@@ -424,19 +424,31 @@ const getPriceAnalysis = async () => {
         const currentET = getETDateForIST(now);
         const currentETDate = currentET.clone().startOf('day');
         
-        // Start from current or previous US trading day and search backwards for most recent complete pair
+        // Start from the most recent possible US trading day
+        // If after 4 PM ET, today's trading day might be complete, so check today first
+        // Otherwise, start from yesterday (most recent completed trading day)
         let startETDate = currentETDate.clone();
-        if (currentET.hour() < 9 || (currentET.hour() === 9 && currentET.minute() < 30)) {
-            // Before market open, start from yesterday
+        if (currentET.hour() >= 16 || (currentET.hour() === 16 && currentET.minute() >= 0)) {
+            // After 4 PM ET, today's trading day is complete, so start from today
+            // Skip weekends
+            while (startETDate.day() === 0 || startETDate.day() === 6) {
+                startETDate.subtract(1, 'day');
+            }
+        } else {
+            // Before 4 PM ET, start from yesterday (most recent completed trading day)
             startETDate.subtract(1, 'day');
-        }
-        // Skip weekends
-        while (startETDate.day() === 0 || startETDate.day() === 6) {
-            startETDate.subtract(1, 'day');
+            // Skip weekends
+            while (startETDate.day() === 0 || startETDate.day() === 6) {
+                startETDate.subtract(1, 'day');
+            }
         }
         
         // Search backwards to find the most recent US trading day with both opening and closing
+        // We want the MOST RECENT complete pair, so we check from most recent to oldest
         let foundPair = false;
+        let bestPair = null;
+        let bestETDate = null;
+        
         for (let daysBack = 0; daysBack <= 7; daysBack++) {
             const checkETDate = startETDate.clone().subtract(daysBack, 'days');
             // Skip weekends
@@ -444,12 +456,20 @@ const getPriceAnalysis = async () => {
             
             const { opening, closing } = await getNasdaqPricesForUSTradingDay(checkETDate);
             if (opening && closing) {
-                dailyNasdaqOpen = opening;
-                dailyNasdaqClose = closing;
-                dailyNasdaqCloseDate = closing.captured_at;
-                foundPair = true;
-                break;
+                // Found a complete pair - keep track of the most recent one
+                if (!bestPair || checkETDate.isAfter(bestETDate, 'day')) {
+                    bestPair = { opening, closing };
+                    bestETDate = checkETDate.clone();
+                }
             }
+        }
+        
+        // Use the most recent complete pair found
+        if (bestPair) {
+            dailyNasdaqOpen = bestPair.opening;
+            dailyNasdaqClose = bestPair.closing;
+            dailyNasdaqCloseDate = bestPair.closing.captured_at;
+            foundPair = true;
         }
         
         // If market is currently open and we found opening but no closing for today, use current price
