@@ -22,16 +22,36 @@ const PriceCard = ({ title, openingPrice, closingPrice, performance, currency = 
         return date.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
     };
 
-    // Check if the end date is very recent (within last 10 minutes) to show "Live" indicator
+    // Check if the end date represents a live/current price (not a captured closing)
     // This indicates the market is still open and showing current/live price
+    // If it's at the expected closing time, it's a captured closing, not live
     const isLive = (endDate) => {
         if (!endDate) return false;
         const end = new Date(endDate);
         const now = new Date();
         const diffMinutes = (now - end) / (1000 * 60);
-        // Show "Live" if the timestamp is within the last 10 minutes
-        // This means we're using current price, not a captured closing price
-        return diffMinutes >= 0 && diffMinutes < 10;
+        
+        // If it's more than 10 minutes old, it's definitely not live
+        if (diffMinutes >= 10) return false;
+        
+        // Get the hour and minute of the end date in IST
+        const endIST = new Date(end.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+        const endHour = endIST.getHours();
+        const endMinute = endIST.getMinutes();
+        
+        // Nifty closing is always at 3:40 PM IST (15:40)
+        // If the timestamp is at 3:40 PM (or 3:39-3:41 range), it's a captured closing, not live
+        const isNiftyClosingTime = (endHour === 15 && endMinute >= 39 && endMinute <= 41);
+        
+        // NASDAQ closing is typically at 2:00-2:30 AM IST (next day)
+        // If the timestamp is at 2:00-2:30 AM, it's a captured closing, not live
+        const isNasdaqClosingTime = (endHour === 2 && endMinute >= 0 && endMinute <= 30);
+        
+        // Only show "Live" if:
+        // 1. It's within last 10 minutes
+        // 2. AND it's NOT at the expected closing time (3:40 PM for Nifty, 2:00-2:30 AM for NASDAQ)
+        // This means we're using current/live price, not a captured closing price
+        return diffMinutes >= 0 && diffMinutes < 10 && !isNiftyClosingTime && !isNasdaqClosingTime;
     };
 
     // Format date range ensuring chronological order
