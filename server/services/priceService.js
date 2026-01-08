@@ -20,7 +20,7 @@ const getPriceAnalysis = async () => {
         const getNiftyOpeningPrice = async (date) => {
             const query = `
                 SELECT * FROM price_captures 
-                WHERE (captured_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date = $1 
+                WHERE DATE(timezone('Asia/Kolkata', captured_at)) = $1 
                 AND capture_time = 'nifty_opening'
                 AND nifty IS NOT NULL
                 ORDER BY captured_at ASC 
@@ -34,7 +34,7 @@ const getPriceAnalysis = async () => {
         const getNiftyClosingPrice = async (date) => {
             const query = `
                 SELECT * FROM price_captures 
-                WHERE (captured_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date = $1 
+                WHERE DATE(timezone('Asia/Kolkata', captured_at)) = $1 
                 AND capture_time = 'nifty_closing'
                 AND nifty IS NOT NULL
                 ORDER BY captured_at DESC 
@@ -58,7 +58,7 @@ const getPriceAnalysis = async () => {
                 
                 const query = `
                     SELECT * FROM price_captures 
-                    WHERE (captured_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date = $1 
+                    WHERE DATE(timezone('Asia/Kolkata', captured_at)) = $1 
                     AND capture_time = $2
                     AND ${assetField} IS NOT NULL
                     ORDER BY captured_at DESC 
@@ -86,7 +86,7 @@ const getPriceAnalysis = async () => {
                 
                 const query = `
                     SELECT * FROM price_captures 
-                    WHERE (captured_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date = $1 
+                    WHERE DATE(timezone('Asia/Kolkata', captured_at)) = $1 
                     AND capture_time = $2
                     AND ${assetField} IS NOT NULL
                     ORDER BY captured_at ASC 
@@ -102,9 +102,11 @@ const getPriceAnalysis = async () => {
 
         // Helper: Get Nasdaq opening price for a specific date (IST date)
         const getNasdaqOpeningPrice = async (date) => {
+            // Fix timezone conversion: UTC to IST
+            // Use timezone() function for proper conversion
             const query = `
                 SELECT * FROM price_captures 
-                WHERE (captured_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date = $1 
+                WHERE DATE(timezone('Asia/Kolkata', captured_at)) = $1 
                 AND capture_time = 'nasdaq_opening'
                 AND nasdaq IS NOT NULL
                 ORDER BY captured_at ASC 
@@ -116,9 +118,11 @@ const getPriceAnalysis = async () => {
 
         // Helper: Get Nasdaq closing price for a specific date (IST date)
         const getNasdaqClosingPrice = async (date) => {
+            // Fix timezone conversion: UTC to IST
+            // Use timezone() function for proper conversion
             const query = `
                 SELECT * FROM price_captures 
-                WHERE (captured_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date = $1 
+                WHERE DATE(timezone('Asia/Kolkata', captured_at)) = $1 
                 AND capture_time = 'nasdaq_closing'
                 AND nasdaq IS NOT NULL
                 ORDER BY captured_at DESC 
@@ -148,7 +152,7 @@ const getPriceAnalysis = async () => {
         const getGoldPrice = async (date) => {
             const query = `
                 SELECT * FROM price_captures 
-                WHERE (captured_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date = $1 
+                WHERE DATE(timezone('Asia/Kolkata', captured_at)) = $1 
                 AND capture_time = 'gold_daily'
                 AND gold_24k_per_1g IS NOT NULL
                 ORDER BY captured_at ASC 
@@ -169,7 +173,7 @@ const getPriceAnalysis = async () => {
                 
                 const query = `
                     SELECT * FROM price_captures 
-                    WHERE (captured_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date = $1 
+                    WHERE DATE(timezone('Asia/Kolkata', captured_at)) = $1 
                     AND capture_time = 'gold_daily'
                     AND gold_24k_per_1g IS NOT NULL
                     ORDER BY captured_at DESC 
