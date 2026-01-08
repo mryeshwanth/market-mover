@@ -212,26 +212,55 @@ const getPriceAnalysis = async () => {
             weekNiftyClose = await getLastAvailableWeekdayClosing(weekMonday, now, 'nifty_closing', 'nifty');
         }
 
-        // Nasdaq Weekly: Monday opening → Current day closing (or last available weekday closing)
-        // If Monday opening doesn't exist, find first available weekday opening
-        let weekMondayNasdaqOpen = await getNasdaqOpeningPrice(weekMonday);
-        if (!weekMondayNasdaqOpen) {
-            // Find first available weekday opening in the week
-            for (let i = 0; i <= 4; i++) {
-                const checkDate = weekMonday.clone().add(i, 'days');
-                weekMondayNasdaqOpen = await getNasdaqOpeningPrice(checkDate);
-                if (weekMondayNasdaqOpen) break;
+        // Nasdaq Weekly: Monday US trading day opening → Current US trading day closing
+        // Convert IST week Monday to US trading day Monday
+        const weekMondayET = getETDateForIST(weekMonday);
+        const weekMondayETDate = weekMondayET.clone().startOf('day');
+        // Find the Monday US trading day (might be different from IST Monday)
+        let weekMondayUSTradingDay = weekMondayETDate.clone();
+        // If Monday ET is a weekend, find the previous Monday
+        while (weekMondayUSTradingDay.day() === 0 || weekMondayUSTradingDay.day() === 6) {
+            weekMondayUSTradingDay.subtract(1, 'day');
+        }
+        if (weekMondayUSTradingDay.day() !== 1) {
+            // Not Monday, find the most recent Monday
+            weekMondayUSTradingDay.day(1);
+            if (weekMondayUSTradingDay.isAfter(weekMondayETDate)) {
+                weekMondayUSTradingDay.subtract(7, 'days');
             }
         }
-        let weekNasdaqClose = null;
         
-        if (currentDay >= 1 && currentDay <= 5) {
-            weekNasdaqClose = await getNasdaqClosingPrice(now);
-            if (!weekNasdaqClose) {
-                weekNasdaqClose = await getLastAvailableWeekdayClosing(weekMonday, now, 'nasdaq_closing', 'nasdaq');
+        // Get Monday US trading day opening
+        const { opening: weekMondayOpen } = await getNasdaqPricesForUSTradingDay(weekMondayUSTradingDay);
+        let weekMondayNasdaqOpen = weekMondayOpen;
+        
+        // Get current/latest US trading day closing
+        const currentETForWeek = getETDateForIST(now);
+        const currentETDateForWeek = currentETForWeek.clone().startOf('day');
+        let currentUSTradingDay = currentETDateForWeek.clone();
+        if (currentETForWeek.hour() < 9 || (currentETForWeek.hour() === 9 && currentETForWeek.minute() < 30)) {
+            currentUSTradingDay.subtract(1, 'day');
+            while (currentUSTradingDay.day() === 0 || currentUSTradingDay.day() === 6) {
+                currentUSTradingDay.subtract(1, 'day');
             }
-        } else {
-            weekNasdaqClose = await getLastAvailableWeekdayClosing(weekMonday, now, 'nasdaq_closing', 'nasdaq');
+        }
+        
+        const { closing: currentWeekClose } = await getNasdaqPricesForUSTradingDay(currentUSTradingDay);
+        let weekNasdaqClose = currentWeekClose;
+        
+        // Fallback: if no closing found, search backwards
+        if (!weekNasdaqClose) {
+            for (let daysBack = 0; daysBack <= 7; daysBack++) {
+                const checkETDate = currentUSTradingDay.clone().subtract(daysBack, 'days');
+                if (checkETDate.day() === 0 || checkETDate.day() === 6) continue;
+                if (checkETDate.isBefore(weekMondayUSTradingDay, 'day')) break;
+                
+                const { closing } = await getNasdaqPricesForUSTradingDay(checkETDate);
+                if (closing) {
+                    weekNasdaqClose = closing;
+                    break;
+                }
+            }
         }
 
         // Gold Weekly: Monday 08:00 → Current day 08:00 (or last available day)
@@ -394,15 +423,24 @@ const getPriceAnalysis = async () => {
                 }
             }
             
-            // If still not found, fall back to individual searches (but this shouldn't happen)
-            if (!foundPair) {
-                if (!dailyNasdaqOpen) {
-                    dailyNasdaqOpen = await getLastAvailableWeekdayOpening(today.clone().subtract(7, 'days'), today, 'nasdaq_opening', 'nasdaq');
-                }
-                if (!dailyNasdaqClose && !isNasdaqMarketOpen) {
-                    dailyNasdaqClose = await getLastAvailableWeekdayClosing(today.clone().subtract(7, 'days'), today, 'nasdaq_closing', 'nasdaq');
-                    if (dailyNasdaqClose) {
-                        dailyNasdaqCloseDate = dailyNasdaqClose.captured_at;
+            // If still not found, try to find the most recent opening and its corresponding closing
+            // This ensures we don't mix opening and closing from different US trading days
+            if (!foundPair && !dailyNasdaqOpen) {
+                // Find most recent opening
+                const recentOpen = await getLastAvailableWeekdayOpening(today.clone().subtract(7, 'days'), today, 'nasdaq_opening', 'nasdaq');
+                if (recentOpen) {
+                    // Try to find the closing for the same US trading day as this opening
+                    // Opening is captured on US trading day's evening IST
+                    // Closing is captured on next day's early morning IST
+                    const openingISTDate = moment(recentOpen.captured_at).tz('Asia/Kolkata');
+                    const openingISTDateOnly = openingISTDate.clone().startOf('day');
+                    const closingISTDate = openingISTDateOnly.clone().add(1, 'day');
+                    const correspondingClose = await getNasdaqClosingPrice(closingISTDate);
+                    
+                    if (correspondingClose) {
+                        dailyNasdaqOpen = recentOpen;
+                        dailyNasdaqClose = correspondingClose;
+                        dailyNasdaqCloseDate = correspondingClose.captured_at;
                     }
                 }
             }
