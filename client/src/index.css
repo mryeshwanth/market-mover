@@ -36,12 +36,12 @@ body {
 
 header {
   text-align: center;
-  margin-bottom: 60px;
+  margin-bottom: 30px;
   color: #1a1a1a;
 }
 
 h1 {
-  font-size: 3.5rem;
+  font-size: 0.875rem;
   font-weight: 700;
   margin-bottom: 15px;
   line-height: 1.1;
