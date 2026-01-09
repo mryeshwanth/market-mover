@@ -426,9 +426,35 @@ const getPriceAnalysis = async () => {
         let dailyNasdaqCloseDate = null;
         
         // FIRST: Check if today's IST date has a nasdaq_opening
-        // This is the simplest and most direct check
-        const todayIST = now.clone().tz('Asia/Kolkata').startOf('day');
-        const todayOpening = await getNasdaqOpeningPrice(todayIST);
+        // Get current IST time directly to ensure correct date
+        const nowIST = moment.tz('Asia/Kolkata');
+        const todayIST = nowIST.clone().startOf('day');
+        let todayOpening = await getNasdaqOpeningPrice(todayIST);
+        
+        // Fallback: If today's opening not found, check the most recent opening
+        // and use it if it's from today or very recent (within last 12 hours)
+        if (!todayOpening) {
+            const recentOpeningQuery = `
+                SELECT * FROM price_captures 
+                WHERE capture_time = 'nasdaq_opening'
+                AND nasdaq IS NOT NULL
+                ORDER BY captured_at DESC 
+                LIMIT 1
+            `;
+            const recentRes = await pool.query(recentOpeningQuery);
+            if (recentRes.rows.length > 0) {
+                const recentOpening = recentRes.rows[0];
+                const openingTime = moment(recentOpening.captured_at).tz('Asia/Kolkata');
+                const openingISTDate = openingTime.clone().startOf('day');
+                
+                // Use if it's from today or yesterday (but very recent, within 12 hours)
+                const hoursSinceOpening = nowIST.diff(openingTime, 'hours');
+                if (openingISTDate.isSame(todayIST, 'day') || 
+                    (openingISTDate.isSame(todayIST.clone().subtract(1, 'day'), 'day') && hoursSinceOpening < 12)) {
+                    todayOpening = recentOpening;
+                }
+            }
+        }
         
         if (todayOpening) {
             // We have today's opening
