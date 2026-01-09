@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { fetchLivePrices } from '../services/api';
 
-const PeriodCard = ({ periodLabel, openingPrice, closingPrice, performance, currency = '₹', startDate, endDate, isGold = false, marketTitle = '' }) => {
+const PeriodCard = ({ periodLabel, openingPrice, closingPrice, performance, currency = '₹', startDate, endDate, isGold = false }) => {
     const isPositive = performance.change >= 0;
     const isNeutral = performance.change === 0;
     const Icon = isNeutral ? Minus : (isPositive ? TrendingUp : TrendingDown);
@@ -21,61 +21,26 @@ const PeriodCard = ({ periodLabel, openingPrice, closingPrice, performance, curr
         return date.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
     };
 
-    const isLive = (endDate, startDate, periodLabel, currency, marketTitle) => {
+    const isLive = (endDate) => {
         if (!endDate) return false;
         const end = new Date(endDate);
         const now = new Date();
         const diffMinutes = (now - end) / (1000 * 60);
         
-        // Check if endDate is very recent (within last 2 hours)
-        if (diffMinutes < 0 || diffMinutes >= 120) return false;
-        
-        // Get current IST time
-        const nowIST = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
-        const nowHour = nowIST.getHours();
-        const nowMinute = nowIST.getMinutes();
-        const nowDay = nowIST.getDay(); // 0 = Sunday, 6 = Saturday
-        const isWeekend = nowDay === 0 || nowDay === 6;
-        
-        // Check if NASDAQ market is currently open (7:00 PM - 2:30 AM IST on weekdays)
-        const isNasdaqMarketOpen = !isWeekend && 
-            (nowHour >= 19 || nowHour < 2 || (nowHour === 2 && nowMinute <= 30));
-        
-        // Check if Nifty market is currently open (9:20 AM - 3:40 PM IST on weekdays)
-        const isNiftyMarketOpen = !isWeekend && 
-            ((nowHour > 9 || (nowHour === 9 && nowMinute >= 20)) && 
-             (nowHour < 15 || (nowHour === 15 && nowMinute <= 40)));
-        
-        // For daily period, check if startDate is today and market is open
-        if (periodLabel === 'Daily' && startDate) {
-            const start = new Date(startDate);
-            const startIST = new Date(start.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
-            const nowISTDate = new Date(nowIST.getFullYear(), nowIST.getMonth(), nowIST.getDate());
-            const startISTDate = new Date(startIST.getFullYear(), startIST.getMonth(), startIST.getDate());
+        // If endDate is very recent (within last 10 minutes), show Live
+        if (diffMinutes >= 0 && diffMinutes < 10) {
+            const endIST = new Date(end.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+            const endHour = endIST.getHours();
+            const endMinute = endIST.getMinutes();
             
-            // If startDate is today and endDate is very recent, check market status
-            if (startISTDate.getTime() === nowISTDate.getTime() && diffMinutes < 60) {
-                // Determine which market based on currency or market title
-                const isNasdaq = currency === '$' || marketTitle.toLowerCase().includes('nasdaq');
-                const isNifty = currency === '₹' && !isGold && (marketTitle.toLowerCase().includes('nifty') || !marketTitle.toLowerCase().includes('gold'));
-                
-                // If the specific market is open, show Live
-                if ((isNasdaq && isNasdaqMarketOpen) || (isNifty && isNiftyMarketOpen)) {
-                    return true;
-                }
-            }
+            // Don't show Live at closing times
+            const isNiftyClosingTime = (endHour === 15 && endMinute >= 39 && endMinute <= 41);
+            const isNasdaqClosingTime = (endHour === 2 && endMinute >= 0 && endMinute <= 30);
+            
+            return !isNiftyClosingTime && !isNasdaqClosingTime;
         }
         
-        // Check if it's at closing time (don't show Live at closing time)
-        const endIST = new Date(end.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
-        const endHour = endIST.getHours();
-        const endMinute = endIST.getMinutes();
-        
-        const isNiftyClosingTime = (endHour === 15 && endMinute >= 39 && endMinute <= 41);
-        const isNasdaqClosingTime = (endHour === 2 && endMinute >= 0 && endMinute <= 30);
-        
-        // If very recent (within 30 minutes) and not at closing time, show Live
-        return diffMinutes < 30 && !isNiftyClosingTime && !isNasdaqClosingTime;
+        return false;
     };
 
     const formatDateRange = (startDate, endDate) => {
@@ -85,7 +50,7 @@ const PeriodCard = ({ periodLabel, openingPrice, closingPrice, performance, curr
         const end = new Date(endDate);
         
         const startFormatted = `${formatDate(start)} ${formatTime(start)}`;
-        const endFormatted = isLive(endDate, startDate, periodLabel, currency, marketTitle || '') 
+        const endFormatted = isLive(endDate) 
             ? 'Live' 
             : `${formatDate(end)} ${formatTime(end)}`;
         
@@ -148,7 +113,6 @@ const MarketCard = ({ marketTitle, daily, weekly, monthly, currency = '₹', isG
                 startDate={daily.startDate}
                 endDate={daily.endDate}
                 isGold={isGold}
-                marketTitle={marketTitle}
             />
             <PeriodCard
                 periodLabel="Weekly"
@@ -159,7 +123,6 @@ const MarketCard = ({ marketTitle, daily, weekly, monthly, currency = '₹', isG
                 startDate={weekly.startDate}
                 endDate={weekly.endDate}
                 isGold={isGold}
-                marketTitle={marketTitle}
             />
             <PeriodCard
                 periodLabel="Monthly"
@@ -170,7 +133,6 @@ const MarketCard = ({ marketTitle, daily, weekly, monthly, currency = '₹', isG
                 startDate={monthly.startDate}
                 endDate={monthly.endDate}
                 isGold={isGold}
-                marketTitle={marketTitle}
             />
         </div>
     );
