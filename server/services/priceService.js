@@ -369,9 +369,10 @@ const getPriceAnalysis = async () => {
         // 4. Calculate Daily Performance
         // For daily: Today's opening → Today's closing (or current price if market is still open)
         const today = now.clone();
-        const isWeekend = today.day() === 0 || today.day() === 6; // Sunday = 0, Saturday = 6
-        const currentHour = today.hour();
-        const currentMinute = today.minute();
+        const nowIST = moment.tz('Asia/Kolkata');
+        const isWeekend = nowIST.day() === 0 || nowIST.day() === 6; // Sunday = 0, Saturday = 6
+        const currentHour = nowIST.hour();
+        const currentMinute = nowIST.minute();
         
         // Check if Nifty market is currently open (9:20 AM - 3:40 PM IST on weekdays)
         const isNiftyMarketOpen = !isWeekend && 
@@ -415,6 +416,7 @@ const getPriceAnalysis = async () => {
         
         // Check if Nasdaq market is currently open (roughly 7:00 PM IST - 2:00 AM IST next day on weekdays)
         // Nasdaq trades 9:30 AM - 4:00 PM EST/EDT, which is ~7:00 PM - 1:30 AM IST (EST) or ~8:00 PM - 2:30 AM IST (EDT)
+        // Use IST time for market open check
         const isNasdaqMarketOpen = !isWeekend && 
             (currentHour >= 19 || currentHour < 2 || (currentHour === 2 && currentMinute <= 30));
         
@@ -427,12 +429,14 @@ const getPriceAnalysis = async () => {
         if (!isWeekend) {
             // Try to get today's data first
             // For NASDAQ: opening is captured on today's IST date, closing is captured on tomorrow's IST date
-            dailyNasdaqOpen = await getNasdaqOpeningPrice(today);
-            const tomorrow = today.clone().add(1, 'day');
-            dailyNasdaqClose = await getNasdaqClosingPrice(tomorrow);
+            // Use IST date for queries
+            const todayIST = nowIST.clone().startOf('day');
+            dailyNasdaqOpen = await getNasdaqOpeningPrice(todayIST);
+            const tomorrowIST = todayIST.clone().add(1, 'day');
+            dailyNasdaqClose = await getNasdaqClosingPrice(tomorrowIST);
             
-            // If market is open and we have opening but no closing, use current price
-            if (isNasdaqMarketOpen && dailyNasdaqOpen && !dailyNasdaqClose && current.nasdaq) {
+            // If market is open and we have today's opening, always use current price
+            if (isNasdaqMarketOpen && dailyNasdaqOpen && current.nasdaq) {
                 // Use current price as closing price
                 dailyNasdaqClose = {
                     ...dailyNasdaqOpen,
@@ -441,19 +445,30 @@ const getPriceAnalysis = async () => {
                 };
                 dailyNasdaqCloseDate = now.toISOString();
             } else if (dailyNasdaqClose) {
+                // Market is closed, use the captured closing price
                 dailyNasdaqCloseDate = dailyNasdaqClose.captured_at;
+            } else if (dailyNasdaqOpen && current.nasdaq) {
+                // Market is closed but no closing captured yet, use current price as fallback
+                dailyNasdaqClose = {
+                    ...dailyNasdaqOpen,
+                    nasdaq: current.nasdaq,
+                    captured_at: now.toISOString()
+                };
+                dailyNasdaqCloseDate = now.toISOString();
             }
         }
         
         // If weekend or no data for today, use last available weekday
         if (isWeekend || !dailyNasdaqOpen) {
-            dailyNasdaqOpen = await getLastAvailableWeekdayOpening(today.clone().subtract(7, 'days'), today, 'nasdaq_opening', 'nasdaq');
+            const todayIST = nowIST.clone().startOf('day');
+            dailyNasdaqOpen = await getLastAvailableWeekdayOpening(todayIST.clone().subtract(7, 'days'), todayIST, 'nasdaq_opening', 'nasdaq');
         }
         if ((isWeekend || !dailyNasdaqClose) && !isNasdaqMarketOpen) {
             // For NASDAQ, closing is captured on next day's IST date
             // So search from tomorrow backwards
-            const tomorrow = today.clone().add(1, 'day');
-            dailyNasdaqClose = await getLastAvailableWeekdayClosing(today.clone().subtract(7, 'days'), tomorrow, 'nasdaq_closing', 'nasdaq');
+            const todayIST = nowIST.clone().startOf('day');
+            const tomorrowIST = todayIST.clone().add(1, 'day');
+            dailyNasdaqClose = await getLastAvailableWeekdayClosing(todayIST.clone().subtract(7, 'days'), tomorrowIST, 'nasdaq_closing', 'nasdaq');
             if (dailyNasdaqClose) {
                 dailyNasdaqCloseDate = dailyNasdaqClose.captured_at;
             }
