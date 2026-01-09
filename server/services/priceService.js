@@ -254,21 +254,21 @@ const getPriceAnalysis = async () => {
         // Get current/latest US trading day closing
         const currentETForWeek = getETDateForIST(now);
         const currentETDateForWeek = currentETForWeek.clone().startOf('day');
-        let currentUSTradingDay = currentETDateForWeek.clone();
+        let currentUSTradingDayForWeek = currentETDateForWeek.clone();
         if (currentETForWeek.hour() < 9 || (currentETForWeek.hour() === 9 && currentETForWeek.minute() < 30)) {
-            currentUSTradingDay.subtract(1, 'day');
-            while (currentUSTradingDay.day() === 0 || currentUSTradingDay.day() === 6) {
-                currentUSTradingDay.subtract(1, 'day');
+            currentUSTradingDayForWeek.subtract(1, 'day');
+            while (currentUSTradingDayForWeek.day() === 0 || currentUSTradingDayForWeek.day() === 6) {
+                currentUSTradingDayForWeek.subtract(1, 'day');
             }
         }
         
-        const { closing: currentWeekClose } = await getNasdaqPricesForUSTradingDay(currentUSTradingDay);
+        const { closing: currentWeekClose } = await getNasdaqPricesForUSTradingDay(currentUSTradingDayForWeek);
         let weekNasdaqClose = currentWeekClose;
         
         // Fallback: if no closing found, search backwards
             if (!weekNasdaqClose) {
             for (let daysBack = 0; daysBack <= 7; daysBack++) {
-                const checkETDate = currentUSTradingDay.clone().subtract(daysBack, 'days');
+                const checkETDate = currentUSTradingDayForWeek.clone().subtract(daysBack, 'days');
                 if (checkETDate.day() === 0 || checkETDate.day() === 6) continue;
                 if (checkETDate.isBefore(weekMondayUSTradingDay, 'day')) break;
                 
