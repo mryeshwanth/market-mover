@@ -64,17 +64,17 @@ h1 {
   background: rgba(255, 255, 255, 0.98);
   border-radius: 20px;
   padding: 30px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  box-shadow: 0 12px 36px rgba(0,0,0,0.3);
 }
 
 .market-header {
-  margin-bottom: 25px;
-  padding-bottom: 20px;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
   border-bottom: 2px solid #f0f0f0;
 }
 
 .market-title {
-  font-size: 1.5rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: #1a1a1a;
 }
@@ -83,7 +83,7 @@ h1 {
   background: #f8f9fa;
   border-radius: 12px;
   padding: 20px;
-  margin-bottom: 15px;
+  margin-bottom: 122px;
 }
 
 .period-label {
