@@ -31,8 +31,11 @@ class CaptureService {
             try {
                 const nasdaqData = await yahooFinance.fetchPrice(yahooFinance.SYMBOLS.NASDAQ);
                 nasdaqPrice = nasdaqData.price;
+                console.log(`✓ Successfully fetched NASDAQ price: $${nasdaqPrice}`);
             } catch (e) {
                 console.error("Failed to fetch Nasdaq price", e);
+                // Don't insert NULL record if NASDAQ fetch fails - throw error to prevent insertion
+                throw new Error(`NASDAQ price fetch failed: ${e.message}`);
             }
         }
 
@@ -132,6 +135,15 @@ class CaptureService {
             RETURNING id
         `;
 
+        // Log what we're about to insert
+        if (type === 'nasdaq_opening' || type === 'nasdaq_closing') {
+            const istTime = capturedAt.clone().tz('Asia/Kolkata');
+            console.log(`Inserting NASDAQ ${type}:`);
+            console.log(`  Price: $${nasdaqPrice}`);
+            console.log(`  Captured at (IST): ${istTime.format('YYYY-MM-DD HH:mm:ss')} IST`);
+            console.log(`  Captured at (UTC): ${capturedAt.toISOString()}`);
+        }
+
         const dbResult = await db.query(insertQuery, [
             niftyPrice,
             nasdaqPrice,
@@ -144,6 +156,10 @@ class CaptureService {
         ]);
 
         const newId = dbResult.rows[0].id;
+        
+        if (type === 'nasdaq_opening' || type === 'nasdaq_closing') {
+            console.log(`✓ NASDAQ ${type} inserted successfully with ID: ${newId}`);
+        }
 
         const result = {
             id: newId,

@@ -247,8 +247,8 @@ const getPriceAnalysis = async () => {
                 if (opening) {
                     weekMondayNasdaqOpen = opening;
                     break;
-                }
             }
+        }
         }
         
         // Get current/latest US trading day closing
@@ -266,7 +266,7 @@ const getPriceAnalysis = async () => {
         let weekNasdaqClose = currentWeekClose;
         
         // Fallback: if no closing found, search backwards
-        if (!weekNasdaqClose) {
+            if (!weekNasdaqClose) {
             for (let daysBack = 0; daysBack <= 7; daysBack++) {
                 const checkETDate = currentUSTradingDay.clone().subtract(daysBack, 'days');
                 if (checkETDate.day() === 0 || checkETDate.day() === 6) continue;
@@ -345,7 +345,7 @@ const getPriceAnalysis = async () => {
         let monthNasdaqClose = currentMonthClose;
         
         // Fallback: if no closing found, search backwards
-        if (!monthNasdaqClose) {
+            if (!monthNasdaqClose) {
             for (let daysBack = 0; daysBack <= 31; daysBack++) {
                 const checkETDate = currentUSTradingDayForMonth.clone().subtract(daysBack, 'days');
                 if (checkETDate.day() === 0 || checkETDate.day() === 6) continue;
