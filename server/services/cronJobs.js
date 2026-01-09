@@ -14,7 +14,7 @@ async function isGoldCapturedToday() {
     const today = moment.tz(TZ).format('YYYY-MM-DD');
     const query = `
         SELECT * FROM price_captures 
-        WHERE (captured_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date = $1 
+        WHERE DATE(timezone('Asia/Kolkata', captured_at)) = $1 
         AND capture_time = 'gold_daily'
         AND gold_24k_per_1g IS NOT NULL
         LIMIT 1

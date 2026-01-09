@@ -1,4 +1,5 @@
 const axios = require('axios');
+const https = require('https');
 
 const SYMBOLS = {
     NIFTY: '^NSEI',
@@ -7,13 +8,20 @@ const SYMBOLS = {
 
 const BASE_URL = process.env.YAHOO_FINANCE_API_URL || 'https://query1.finance.yahoo.com/v8/finance/chart';
 
+// Configure HTTPS agent to handle SSL certificates
+// In production, this should work fine, but for local testing we may need to reject unauthorized
+const httpsAgent = new https.Agent({
+    rejectUnauthorized: process.env.NODE_ENV === 'production' ? true : false
+});
+
 async function fetchPrice(symbol) {
     try {
         const response = await axios.get(`${BASE_URL}/${symbol}`, {
             params: {
                 interval: '1d',
                 range: '1d'
-            }
+            },
+            httpsAgent: httpsAgent
         });
 
         const result = response.data.chart.result[0];
