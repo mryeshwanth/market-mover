@@ -105,20 +105,23 @@ class CaptureService {
                 break;
             case 'nasdaq_closing':
                 // For Nasdaq closing, we're capturing the previous ET trading day's closing
-                // Cron runs at 2:00 AM IST (Tue-Sat), which is previous evening ET
-                // Determine which US trading day's closing we're capturing
+                // Cron runs at 2:00 AM IST (Tue-Sat)
+                // At 2:00 AM IST on Jan 10th, it's Jan 9th 4:30 PM ET (previous evening)
+                // The market closed on Jan 9th at 4:00 PM ET (which is Jan 10th 2:30 AM IST)
+                // So we capture Jan 9th ET's closing
                 const closingET = getETDateForIST(now);
                 const closingETDate = closingET.clone().startOf('day');
                 
-                // At 2:00 AM IST, it's still the previous day in ET (evening of previous day)
-                // So we subtract 1 day to get the previous US trading day
-                let usClosingDay = closingETDate.clone().subtract(1, 'day');
-                // Skip weekends
+                // At 2:00 AM IST, we're capturing the ET day that just closed
+                // Example: Jan 10th 02:00 AM IST -> Jan 9th ET -> capture Jan 9th ET closing
+                let usClosingDay = closingETDate.clone();
+                // Skip weekends - if it's a weekend, go back to Friday
                 while (usClosingDay.day() === 0 || usClosingDay.day() === 6) {
                     usClosingDay.subtract(1, 'day');
                 }
                 
-                capturedAt = getNasdaqClosingIST(usClosingDay);
+                // Use actual capture time (when cron runs) - this is when we actually captured the data
+                capturedAt = now.clone();
                 break;
             case 'gold_daily':
                 capturedAt = now.clone().hour(8).minute(0).second(0).millisecond(0);
@@ -127,7 +130,56 @@ class CaptureService {
                 capturedAt = now;
         }
 
-        // 5. Save to DB with explicit timestamp
+        // 5. Check for duplicates before inserting (especially for NASDAQ)
+        if (type === 'nasdaq_closing' || type === 'nasdaq_opening') {
+            const todayIST = capturedAt.clone().tz('Asia/Kolkata').startOf('day');
+            const duplicateCheck = await db.query(`
+                SELECT * FROM price_captures 
+                WHERE capture_time = $1
+                AND DATE(timezone('Asia/Kolkata', captured_at)) = $2
+                AND nasdaq IS NOT NULL
+                ORDER BY captured_at DESC
+                LIMIT 1
+            `, [type, todayIST.format('YYYY-MM-DD')]);
+            
+            if (duplicateCheck.rows.length > 0) {
+                const existing = duplicateCheck.rows[0];
+                const existingPrice = parseFloat(existing.nasdaq);
+                const newPrice = parseFloat(nasdaqPrice);
+                
+                // If price is different, update the existing record
+                if (Math.abs(existingPrice - newPrice) > 0.01) {
+                    console.log(`⚠ ${type} already exists for ${todayIST.format('YYYY-MM-DD')} IST with price $${existingPrice}, updating to $${newPrice}`);
+                    const updateQuery = `
+                        UPDATE price_captures 
+                        SET nasdaq = $1, captured_at = $2, nasdaq_changed = $3
+                        WHERE id = $4
+                        RETURNING id
+                    `;
+                    const updateResult = await db.query(updateQuery, [
+                        nasdaqPrice,
+                        capturedAt.toISOString(),
+                        changes.nasdaq_changed,
+                        existing.id
+                    ]);
+                    return {
+                        id: updateResult.rows[0].id,
+                        nasdaq: nasdaqPrice,
+                        ...changes
+                    };
+                } else {
+                    // Same price, skip insertion
+                    console.log(`✓ ${type} already exists for ${todayIST.format('YYYY-MM-DD')} IST with same price $${existingPrice}, skipping`);
+                    return {
+                        id: existing.id,
+                        nasdaq: nasdaqPrice,
+                        ...changes
+                    };
+                }
+            }
+        }
+
+        // 6. Save to DB with explicit timestamp
         const insertQuery = `
             INSERT INTO price_captures 
             (nifty, nasdaq, gold_24k_per_1g, capture_time, captured_at, nifty_changed, nasdaq_changed, gold_changed, is_auto_captured)
