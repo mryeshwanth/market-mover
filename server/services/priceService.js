@@ -464,15 +464,30 @@ const getPriceAnalysis = async () => {
                 if (dailyNasdaqOpen) {
                     // Check today for yesterday's US trading day closing
                     dailyNasdaqClose = await getNasdaqClosingPrice(todayIST);
-                    if (dailyNasdaqClose) {
-                        dailyNasdaqCloseDate = dailyNasdaqClose.captured_at;
-                    } else {
+                    if (!dailyNasdaqClose) {
                         // If not found on today, check tomorrow (in case it was captured later)
                         const tomorrowIST = todayIST.clone().add(1, 'day');
                         dailyNasdaqClose = await getNasdaqClosingPrice(tomorrowIST);
-                        if (dailyNasdaqClose) {
-                            dailyNasdaqCloseDate = dailyNasdaqClose.captured_at;
+                    }
+                    // If still not found, get the most recent closing (should be today's)
+                    if (!dailyNasdaqClose) {
+                        const recentClosingQuery = `
+                            SELECT * FROM price_captures 
+                            WHERE capture_time = 'nasdaq_closing'
+                            AND nasdaq IS NOT NULL
+                            AND captured_at >= $1
+                            ORDER BY captured_at ASC
+                            LIMIT 1
+                        `;
+                        // Look for closing captured after yesterday's opening time
+                        const openingTime = moment(dailyNasdaqOpen.captured_at);
+                        const recentClosing = await pool.query(recentClosingQuery, [openingTime.toISOString()]);
+                        if (recentClosing.rows.length > 0) {
+                            dailyNasdaqClose = recentClosing.rows[0];
                         }
+                    }
+                    if (dailyNasdaqClose) {
+                        dailyNasdaqCloseDate = dailyNasdaqClose.captured_at;
                     }
                 }
             }
