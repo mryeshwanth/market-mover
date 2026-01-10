@@ -432,8 +432,16 @@ const getPriceAnalysis = async () => {
             // Use IST date for queries
             const todayIST = nowIST.clone().startOf('day');
             dailyNasdaqOpen = await getNasdaqOpeningPrice(todayIST);
+            
+            // Check for closing: first check tomorrow (where today's closing would be), 
+            // then check today (where yesterday's closing would be)
             const tomorrowIST = todayIST.clone().add(1, 'day');
             dailyNasdaqClose = await getNasdaqClosingPrice(tomorrowIST);
+            
+            // If not found, check today (yesterday's closing captured early morning today)
+            if (!dailyNasdaqClose) {
+                dailyNasdaqClose = await getNasdaqClosingPrice(todayIST);
+            }
             
             // If market is open and we have opening but no closing, use current price (same as Nifty)
             if (isNasdaqMarketOpen && dailyNasdaqOpen && !dailyNasdaqClose && current.nasdaq) {
