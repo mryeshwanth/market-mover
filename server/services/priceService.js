@@ -427,42 +427,66 @@ const getPriceAnalysis = async () => {
         let dailyNasdaqCloseDate = null;
         
         if (!isWeekend) {
-            // For NASDAQ daily, determine the current US trading day and get its opening/closing
-            // This matches the approach used in weekly/monthly which works correctly
+            // For NASDAQ daily, find the most recent US trading day with both opening and closing
+            // Start from current US trading day and go backwards if needed
             const currentET = getETDateForIST(now);
             const currentETDate = currentET.clone().startOf('day');
             
             // Determine the current US trading day
             let currentUSTradingDay = currentETDate.clone();
             if (currentET.hour() < 9 || (currentET.hour() === 9 && currentET.minute() < 30)) {
-                // Before 9:30 AM ET, we're still in previous trading day
                 currentUSTradingDay.subtract(1, 'day');
                 while (currentUSTradingDay.day() === 0 || currentUSTradingDay.day() === 6) {
                     currentUSTradingDay.subtract(1, 'day');
                 }
             } else {
-                // After 9:30 AM ET, we're in today's trading day
                 while (currentUSTradingDay.day() === 0 || currentUSTradingDay.day() === 6) {
                     currentUSTradingDay.subtract(1, 'day');
                 }
             }
             
-            // Get opening and closing for the current US trading day (same method as weekly)
-            const { opening: todayOpening, closing: todayClosing } = await getNasdaqPricesForUSTradingDay(currentUSTradingDay);
-            dailyNasdaqOpen = todayOpening;
-            dailyNasdaqClose = todayClosing;
+            // Try current US trading day first
+            let { opening: todayOpening, closing: todayClosing } = await getNasdaqPricesForUSTradingDay(currentUSTradingDay);
             
-            // If market is open and we have opening but no closing, use current price
-            if (isNasdaqMarketOpen && dailyNasdaqOpen && !dailyNasdaqClose && current.nasdaq) {
-                // Use current price as closing price
+            // If we have opening but no closing, and market is open, use current price
+            if (isNasdaqMarketOpen && todayOpening && !todayClosing && current.nasdaq) {
+                dailyNasdaqOpen = todayOpening;
                 dailyNasdaqClose = {
-                    ...dailyNasdaqOpen,
+                    ...todayOpening,
                     nasdaq: current.nasdaq,
                     captured_at: now.toISOString()
                 };
                 dailyNasdaqCloseDate = now.toISOString();
-            } else if (dailyNasdaqClose) {
-                dailyNasdaqCloseDate = dailyNasdaqClose.captured_at;
+            } else if (todayOpening && todayClosing) {
+                // We have both opening and closing for current US trading day
+                dailyNasdaqOpen = todayOpening;
+                dailyNasdaqClose = todayClosing;
+                dailyNasdaqCloseDate = todayClosing.captured_at;
+            } else {
+                // Look for most recent complete US trading day (with both opening and closing)
+                let foundComplete = false;
+                for (let daysBack = 0; daysBack <= 5; daysBack++) {
+                    const checkETDate = currentUSTradingDay.clone().subtract(daysBack, 'days');
+                    if (checkETDate.day() === 0 || checkETDate.day() === 6) continue;
+                    
+                    const { opening, closing } = await getNasdaqPricesForUSTradingDay(checkETDate);
+                    if (opening && closing) {
+                        dailyNasdaqOpen = opening;
+                        dailyNasdaqClose = closing;
+                        dailyNasdaqCloseDate = closing.captured_at;
+                        foundComplete = true;
+                        break;
+                    }
+                }
+                
+                // If still not found, use whatever we have
+                if (!foundComplete) {
+                    dailyNasdaqOpen = todayOpening;
+                    dailyNasdaqClose = todayClosing;
+                    if (dailyNasdaqClose) {
+                        dailyNasdaqCloseDate = dailyNasdaqClose.captured_at;
+                    }
+                }
             }
         }
         
