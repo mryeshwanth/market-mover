@@ -54,10 +54,18 @@ const PeriodCard = ({ periodLabel, openingPrice, closingPrice, performance, curr
             ? 'Live' 
             : `${formatDate(end)} ${formatTime(end)}`;
         
-        if (start > end) {
-            return `${endFormatted} → ${startFormatted}`;
+        // For NASDAQ, opening is in the evening and closing is next day early morning
+        // So start timestamp might be > end timestamp, but we always show opening → closing
+        // Only swap if the dates are clearly wrong (more than 12 hours difference and end is clearly before start)
+        const hoursDiff = (start - end) / (1000 * 60 * 60);
+        if (hoursDiff > 12) {
+            // Opening is more than 12 hours after closing, which means they're swapped
+            // This happens when opening is evening and closing is next day morning
+            // In this case, we still show opening → closing (don't swap)
+            return `${startFormatted} → ${endFormatted}`;
         }
         
+        // Normal case: start comes before end
         return `${startFormatted} → ${endFormatted}`;
     };
 
