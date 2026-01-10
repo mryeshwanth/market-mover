@@ -427,29 +427,38 @@ const getPriceAnalysis = async () => {
         let dailyNasdaqCloseDate = null;
         
         if (!isWeekend) {
-            // Try to get today's data first (same simple pattern as Nifty)
-            // For NASDAQ: opening is on today's IST date, closing is on tomorrow's IST date
-            const todayIST = nowIST.clone().startOf('day');
-            dailyNasdaqOpen = await getNasdaqOpeningPrice(todayIST);
-            const tomorrowIST = todayIST.clone().add(1, 'day');
-            dailyNasdaqClose = await getNasdaqClosingPrice(tomorrowIST);
+            // For NASDAQ daily, determine the current US trading day and get its opening/closing
+            // This matches the approach used in weekly/monthly which works correctly
+            const currentET = getETDateForIST(now);
+            const currentETDate = currentET.clone().startOf('day');
             
-            // If no opening for today, try yesterday's opening with today's closing
-            if (!dailyNasdaqOpen) {
-                const yesterdayIST = todayIST.clone().subtract(1, 'day');
-                dailyNasdaqOpen = await getNasdaqOpeningPrice(yesterdayIST);
-                if (dailyNasdaqOpen) {
-                    dailyNasdaqClose = await getNasdaqClosingPrice(todayIST);
+            // Determine the current US trading day
+            let currentUSTradingDay = currentETDate.clone();
+            if (currentET.hour() < 9 || (currentET.hour() === 9 && currentET.minute() < 30)) {
+                // Before 9:30 AM ET, we're still in previous trading day
+                currentUSTradingDay.subtract(1, 'day');
+                while (currentUSTradingDay.day() === 0 || currentUSTradingDay.day() === 6) {
+                    currentUSTradingDay.subtract(1, 'day');
+                }
+            } else {
+                // After 9:30 AM ET, we're in today's trading day
+                while (currentUSTradingDay.day() === 0 || currentUSTradingDay.day() === 6) {
+                    currentUSTradingDay.subtract(1, 'day');
                 }
             }
             
-            // If market is open and we have opening but no closing, use current price (same as Nifty)
+            // Get opening and closing for the current US trading day (same method as weekly)
+            const { opening: todayOpening, closing: todayClosing } = await getNasdaqPricesForUSTradingDay(currentUSTradingDay);
+            dailyNasdaqOpen = todayOpening;
+            dailyNasdaqClose = todayClosing;
+            
+            // If market is open and we have opening but no closing, use current price
             if (isNasdaqMarketOpen && dailyNasdaqOpen && !dailyNasdaqClose && current.nasdaq) {
                 // Use current price as closing price
                 dailyNasdaqClose = {
                     ...dailyNasdaqOpen,
                     nasdaq: current.nasdaq,
-                    captured_at: now.toISOString() // Use current time as closing time
+                    captured_at: now.toISOString()
                 };
                 dailyNasdaqCloseDate = now.toISOString();
             } else if (dailyNasdaqClose) {
