@@ -459,10 +459,20 @@ const getPriceAnalysis = async () => {
                 dailyNasdaqOpen = await getNasdaqOpeningPrice(yesterdayIST);
                 
                 // If we have yesterday's opening, check today for its closing
+                // Yesterday's opening (Jan 9th IST) = Jan 9th US trading day opening
+                // Its closing (Jan 10th IST early morning) = Jan 9th US trading day closing
                 if (dailyNasdaqOpen) {
+                    // Check today for yesterday's US trading day closing
                     dailyNasdaqClose = await getNasdaqClosingPrice(todayIST);
                     if (dailyNasdaqClose) {
                         dailyNasdaqCloseDate = dailyNasdaqClose.captured_at;
+                    } else {
+                        // If not found on today, check tomorrow (in case it was captured later)
+                        const tomorrowIST = todayIST.clone().add(1, 'day');
+                        dailyNasdaqClose = await getNasdaqClosingPrice(tomorrowIST);
+                        if (dailyNasdaqClose) {
+                            dailyNasdaqCloseDate = dailyNasdaqClose.captured_at;
+                        }
                     }
                 }
             }
