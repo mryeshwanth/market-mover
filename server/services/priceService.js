@@ -427,7 +427,8 @@ const getPriceAnalysis = async () => {
         let dailyNasdaqCloseDate = null;
         
         if (!isWeekend) {
-            // For NASDAQ daily, use same logic as weekly: get current US trading day closing
+            // For NASDAQ daily, find the most recent US trading day with BOTH opening and closing
+            // Use exact same approach as weekly - search backwards until we find a complete pair
             const currentET = getETDateForIST(now);
             const currentETDate = currentET.clone().startOf('day');
             let currentUSTradingDay = currentETDate.clone();
@@ -442,39 +443,18 @@ const getPriceAnalysis = async () => {
                 }
             }
             
-            // Get current US trading day closing (same as weekly)
-            const { closing: currentDailyClose } = await getNasdaqPricesForUSTradingDay(currentUSTradingDay);
-            let dailyNasdaqClose = currentDailyClose;
-            
-            // Always search backwards to find the most recent closing (same as weekly does)
-            // This ensures we get the latest closing, not just current trading day
-            if (!dailyNasdaqClose) {
-                for (let daysBack = 0; daysBack <= 7; daysBack++) {
-                    const checkETDate = currentUSTradingDay.clone().subtract(daysBack, 'days');
-                    if (checkETDate.day() === 0 || checkETDate.day() === 6) continue;
-                    
-                    const { closing } = await getNasdaqPricesForUSTradingDay(checkETDate);
-                    if (closing) {
-                        dailyNasdaqClose = closing;
-                        break;
-                    }
-                }
-            }
-            
-            // Now find the opening for the US trading day that has this closing
-            if (dailyNasdaqClose) {
-                // Determine which US trading day this closing belongs to
-                // Closing for US trading day X is captured on (X+1) IST early morning
-                const closingIST = moment(dailyNasdaqClose.captured_at).tz('Asia/Kolkata');
-                const closingISTDate = closingIST.clone().startOf('day');
-                // The closing was captured on (US trading day + 1) IST, so subtract 1 day to get the US trading day
-                const usTradingDayForClosing = closingISTDate.clone().subtract(1, 'day');
-                const usTradingDayET = moment.tz(usTradingDayForClosing.format('YYYY-MM-DD'), 'YYYY-MM-DD', 'America/New_York');
+            // Search backwards for most recent US trading day with both opening and closing
+            for (let daysBack = 0; daysBack <= 7; daysBack++) {
+                const checkETDate = currentUSTradingDay.clone().subtract(daysBack, 'days');
+                if (checkETDate.day() === 0 || checkETDate.day() === 6) continue;
                 
-                // Get opening for that US trading day
-                const { opening } = await getNasdaqPricesForUSTradingDay(usTradingDayET);
-                dailyNasdaqOpen = opening;
-                dailyNasdaqCloseDate = dailyNasdaqClose.captured_at;
+                const { opening, closing } = await getNasdaqPricesForUSTradingDay(checkETDate);
+                if (opening && closing) {
+                    dailyNasdaqOpen = opening;
+                    dailyNasdaqClose = closing;
+                    dailyNasdaqCloseDate = closing.captured_at;
+                    break;
+                }
             }
             
             // If market is open and we have opening but no closing, use current price
