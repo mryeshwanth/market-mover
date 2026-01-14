@@ -428,24 +428,24 @@ const getPriceAnalysis = async () => {
         
         if (!isWeekend) {
             // For NASDAQ daily, find the most recent US trading day with BOTH opening and closing
-            // Use exact same approach as weekly - search backwards until we find a complete pair
+            // Nasdaq closes at 4:00 PM ET, and closing is captured at 2:00 AM IST the next day
+            // Strategy: Start from the current ET date and search backwards for the most recent complete trading day
+            // The current ET date might be "today" in ET terms, but if it's the next day in IST,
+            // we should have yesterday's closing data available
+            
             const currentET = getETDateForIST(now);
             const currentETDate = currentET.clone().startOf('day');
-            let currentUSTradingDay = currentETDate.clone();
-            if (currentET.hour() < 9 || (currentET.hour() === 9 && currentET.minute() < 30)) {
-                currentUSTradingDay.subtract(1, 'day');
-                while (currentUSTradingDay.day() === 0 || currentUSTradingDay.day() === 6) {
-                    currentUSTradingDay.subtract(1, 'day');
-                }
-            } else {
-                while (currentUSTradingDay.day() === 0 || currentUSTradingDay.day() === 6) {
-                    currentUSTradingDay.subtract(1, 'day');
-                }
+            let startUSTradingDay = currentETDate.clone();
+            
+            // Skip weekends
+            while (startUSTradingDay.day() === 0 || startUSTradingDay.day() === 6) {
+                startUSTradingDay.subtract(1, 'day');
             }
             
             // Search backwards for most recent US trading day with both opening and closing
+            // Start from daysBack=0 (current ET day) and go backwards
             for (let daysBack = 0; daysBack <= 7; daysBack++) {
-                const checkETDate = currentUSTradingDay.clone().subtract(daysBack, 'days');
+                const checkETDate = startUSTradingDay.clone().subtract(daysBack, 'days');
                 if (checkETDate.day() === 0 || checkETDate.day() === 6) continue;
                 
                 const { opening, closing } = await getNasdaqPricesForUSTradingDay(checkETDate);
