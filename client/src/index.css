@@ -61,16 +61,24 @@ h1 {
 }
 
 .market-card {
-  background: rgba(255, 255, 255, 0.98);
-  border-radius: 20px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
   padding: 30px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.market-card:hover {
+  border-color: #1264a3;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  transform: translateY(-2px);
 }
 
 .market-header {
   margin-bottom: 25px;
   padding-bottom: 20px;
-  border-bottom: 2px solid #f0f0f0;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .market-title {
@@ -80,10 +88,17 @@ h1 {
 }
 
 .period-card {
-  background: #f8f9fa;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 15px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.period-card:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
 }
 
 .period-label {
@@ -150,13 +165,13 @@ h1 {
 }
 
 .change-positive {
-  background: #d4edda;
-  color: #155724;
+  background: #ecfdf3;
+  color: #027a48;
 }
 
 .change-negative {
-  background: #f8d7da;
-  color: #721c24;
+  background: #fef3f2;
+  color: #b42318;
 }
 
 .timestamp {
